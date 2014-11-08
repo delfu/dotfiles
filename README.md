@@ -1,11 +1,11 @@
-#  Dot Files for SamirAhmed
+#  Dot Files for Delong
 
 Inspired by [ryanb](https://github.com/ryanb/dotfiles) and [skwp](https://github.com/skwp/dotfiles) 
 
 ## Install
 
 ```
-git clone https://github.com/samirahmed/dotfiles.git
+git clone https://github.com/dlfu/dotfiles.git
 cd dotfiles
 git submodules init
 git submodules update
