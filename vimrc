@@ -39,8 +39,6 @@ map! <C-k> <ESC>lDi
 " Map CTRL-] to tab right
 map! <C-]> <ESC>>>i
 
-imap hl <esc>
-vmap hl <esc>
 map ; :
 
 """"""""""""""""""""""""

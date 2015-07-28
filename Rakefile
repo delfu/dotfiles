@@ -10,7 +10,7 @@ task :install do
   files = Dir['*'] - %w[Rakefile README.rdoc LICENSE oh-my-zsh retired]
   files.each do |file|
     system %Q{mkdir -p "$HOME/.#{File.dirname(file)}"} if file =~ /\//
-    if File.exist?(File.join(ENV['HOME'], ".#{file.sub(/\.erb$/, '')}"))
+    if File.exist?(File.join(ENV['HOME'], ".#{file.sub(/\.erb$/, '')}")) || true
       if File.identical? file, File.join(ENV['HOME'], ".#{file.sub(/\.erb$/, '')}")
         puts "identical ~/.#{file.sub(/\.erb$/, '')}"
       elsif replace_all

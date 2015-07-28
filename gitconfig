@@ -6,5 +6,9 @@
 	excludesfile = /Users/mockingbird/.gitignore_global
 [alias]
 	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)%Creset' --abbrev-commit
+	cm = commit -m
+	po = push origin
 [color]
 	ui = true
+[push]
+	default = simple
