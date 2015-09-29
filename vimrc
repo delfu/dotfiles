@@ -136,3 +136,9 @@ set encoding=utf-8 " Necessary to show Unicode glyphs
 " Git Gutter
 """"""""""""""""""""""""""
 highlight clear SignColumn
+
+set ic
+set hlsearch
+set nowrap
+
+filetype plugin indent on
