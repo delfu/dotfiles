@@ -73,12 +73,3 @@ export public=~/dropbox/public
 export dev=~/dropbox/dev
 
  [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
-
-
-#######################################
-# Renable git autocomplete with alias #
-#######################################
-alias git=hub
-if type compdef >/dev/null; then
-   compdef hub=git
-fi
