@@ -7,3 +7,8 @@ function fixxcode () {
 	rm -rf ~/Library/Caches/com.apple.dt.Xcode/
 	rm -rf ~/Library/Developer/Xcode/DerivedData/*
 }
+
+#launch zsh
+if [ -t 1 ]; then
+	exec zsh
+fi
