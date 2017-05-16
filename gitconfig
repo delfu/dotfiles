@@ -12,8 +12,14 @@
 	amend = commit --amend
 	sync = !git fetch origin $1:$1
 [color]
+	status = auto
 	ui = true
+[color "status"]
+	changed = red
+	untracked = normal
+	added = magenta
+[color "diff"]
+	old = red
+	new = magenta
 [push]
 	default = current
-[init]
-	templatedir = /Users/delongfu/.git-templates
