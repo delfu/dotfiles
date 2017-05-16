@@ -47,7 +47,8 @@ compinit
 # LS Alias   #
 ##############
 
-alias ls='ls -G' 	#I like color
+LS_COLORS="ow=01;36;40" && export LS_COLORS
+alias ls='ls -G --color=auto' 	#I like color
 alias ll='ls -l '	  #I like lists
 alias la='ls -lAFh'   #long list,show almost all,show type,human readable
 alias lr='ls -tRFh'   #sorted by date,recursive,show type,human readable
