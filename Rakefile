@@ -87,6 +87,8 @@ def install_oh_my_zsh
       puts "skipping oh-my-zsh, you will need to change ~/.zshrc"
     end
   end
+  puts "Copying custom themes"
+  system %Q{cp -r themes/* "$HOME/.oh-my-zsh/themes"}
 end
 
 def run(cmd)
