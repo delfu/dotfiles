@@ -9,9 +9,11 @@
 	cm = commit -m
 	po = push origin
 	undo = checkout --
+	amend = commit --amend
+	sync = !git fetch origin $1:$1
 [color]
 	ui = true
 [push]
-	default = simple
+	default = current
 [init]
 	templatedir = /Users/delongfu/.git-templates
