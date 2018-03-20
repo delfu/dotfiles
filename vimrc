@@ -116,7 +116,7 @@ noremap <C-e> :SyntasticToggleMode<CR>
 """""""""""""""""""""
 set background=dark
 let g:solarized_termcolors=256
-colorscheme solarized
+"colorscheme solarized
 
 """""""""""""""""""""""
 " Tagbars

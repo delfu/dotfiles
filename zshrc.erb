@@ -5,7 +5,7 @@ ZSH=$HOME/.oh-my-zsh
 # Look in ~/.oh-my-zsh/themes/
 # Optionally, if you set this to "random", it'll load a random theme each
 # time that oh-my-zsh is loaded.
-ZSH_THEME="<%= print("ZSH_THEME: 'arrow' or 'miloshadzic' or 'delong': "); STDOUT.flush; STDIN.gets.chomp %>"
+ZSH_THEME="<%= print("ZSH_THEME: 'arrow' or 'miloshadzic': "); STDOUT.flush; STDIN.gets.chomp %>"
 
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
@@ -34,7 +34,7 @@ plugins=(git osx autojump git-extras heroku rvm rails brew gem bundler todo subl
 source $ZSH/oh-my-zsh.sh
 
 # Customize to your needs...
-export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/X11/bin:/opt/local/bin:/opt/local/sbin:$PATH
+# export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/X11/bin:/opt/local/bin:/opt/local/sbin:$PATH
 
 # custom autocompletes
 fpath=( $HOME/.zsh/completions $fpath)

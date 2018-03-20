@@ -3,10 +3,11 @@
 	email = delongfu@gmail.com
 [core]
 	editor = vim
-	excludesfile = /Users/mockingbird/.gitignore_global
 	autocrlf = input
+	ignorecase = true
 [alias]
 	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)%Creset' --abbrev-commit
+	ls = !git ls-files -m | xargs
 	cm = commit -m
 	po = push origin
 	undo = checkout --
@@ -24,3 +25,5 @@
 	new = magenta
 [push]
 	default = current
+[init]
+	templatedir = ~/.git-templates
