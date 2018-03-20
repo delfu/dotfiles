@@ -1,9 +1,10 @@
 [user]
-	name = De Long Fu
+	name = Delong Fu
 	email = delongfu@gmail.com
 [core]
 	editor = vim
 	excludesfile = /Users/mockingbird/.gitignore_global
+	autocrlf = input
 [alias]
 	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)%Creset' --abbrev-commit
 	cm = commit -m

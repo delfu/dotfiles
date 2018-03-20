@@ -142,3 +142,9 @@ set hlsearch
 set nowrap
 
 filetype plugin indent on
+
+""""""""""""""""""""""""""
+" Turn off bell
+"""""""""""""""""""""""""
+set noerrorbells visualbell t_vb=
+autocmd GUIEnter * set visualbell t_vb=
