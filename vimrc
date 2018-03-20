@@ -10,6 +10,7 @@ set number
 " Set the highlighting on the Pmenu
 highlight PMenu 		term=reverse cterm=bold ctermfg=white ctermbg=black
 highlight PMenuSel 		term=reverse cterm=bold ctermfg=red ctermbg=black
+
 """""""""""""""""""""""""""""""""""""""""
 " Basic Navigation and Text Manipulation
 "
@@ -148,3 +149,5 @@ filetype plugin indent on
 """""""""""""""""""""""""
 set noerrorbells visualbell t_vb=
 autocmd GUIEnter * set visualbell t_vb=
+
+autocmd FileType * setlocal formatoptions-=c formatoptions-=r formatoptions-=o
