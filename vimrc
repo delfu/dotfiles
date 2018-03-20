@@ -116,7 +116,7 @@ noremap <C-e> :SyntasticToggleMode<CR>
 """""""""""""""""""""
 set background=dark
 let g:solarized_termcolors=256
-colorscheme solarized
+"colorscheme solarized
 
 """""""""""""""""""""""
 " Tagbars
@@ -142,3 +142,9 @@ set hlsearch
 set nowrap
 
 filetype plugin indent on
+
+""""""""""""""""""""""""""
+" Turn off bell
+"""""""""""""""""""""""""
+set noerrorbells visualbell t_vb=
+autocmd GUIEnter * set visualbell t_vb=
