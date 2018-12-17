@@ -13,6 +13,9 @@
 	undo = checkout --
 	amend = commit --amend
 	sync = !git fetch origin $1:$1
+	forget = update-index --skip-worktree 
+	unforget = update-index --no-skip-worktree 
+	cp = cherry-pick
 [color]
 	status = auto
 	ui = true
