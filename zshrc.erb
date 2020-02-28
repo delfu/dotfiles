@@ -32,7 +32,6 @@ COMPLETION_WAITING_DOTS="true"
 plugins=(git osx git-extras heroku rvm rails brew gem bundler sublime)
 
 source $ZSH/oh-my-zsh.sh
-
 # Customize to your needs...
 export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/X11/bin:/opt/local/bin:/opt/local/sbin:$PATH
 
@@ -59,9 +58,33 @@ dircolors
 
 alias claer='clear'			# autocorrect bad spelling
 alias rm='rm' 			# precautionary
+alias cd='cd -P' # true path
+alias pwd='pwd -P' # true path
+alias clip='clipcopy'
+alias it='git'
 
+alias less='bat' # use bat instead, has syntax highlighting
+alias code="open -a Visual\ Studio\ Code"
+alias vsc="code"
+
+<%= print("setup RVM? [yn]") %>
+<% if STDIN.gets.chomp == "y" %>
+#################
+# RVM           #
+#################
  [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
+<% end %>
 
+<%= print("setup RBENV? [yn]") %>
+<% if STDIN.gets.chomp == "y" %>
+#################
+# RBENV         #
+#################
+eval "$(rbenv init -)"
+<% end %>
+
+<%= print("setup NVM? [yn]") %>
+<% if STDIN.gets.chomp == "y" %>
 #################
 # NVM           #
 #################
@@ -70,3 +93,49 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "/usr/local/opt/nvm/nvm.sh" ] && . "/usr/local/opt/nvm/nvm.sh"  # This loads nvm
 [ -s "/usr/local/opt/nvm/etc/bash_completion" ] && . "/usr/local/opt/nvm/etc/bash_completion"  # This loads nvm bash_completion
 
+# allows for nvm to auto change version based on existance of .nvmrc file in parent folder
+# place this after nvm initialization!
+autoload -U add-zsh-hook
+load-nvmrc() {
+  local node_version="$(nvm version)"
+  local nvmrc_path="$(nvm_find_nvmrc)"
+
+  if [ -n "$nvmrc_path" ]; then
+    local nvmrc_node_version=$(nvm version "$(cat "${nvmrc_path}")")
+
+    if [ "$nvmrc_node_version" = "N/A" ]; then
+      nvm install
+    elif [ "$nvmrc_node_version" != "$node_version" ]; then
+      nvm use
+    fi
+  elif [ "$node_version" != "$(nvm version default)" ]; then
+    echo "Reverting to nvm default version"
+    nvm use default
+  fi
+}
+add-zsh-hook chpwd load-nvmrc
+load-nvmrc
+<% end %>
+
+<%= print("setup Anaconda? [yn]") %>
+<% if STDIN.gets.chomp == "y" %>
+############
+# ANACONDA #
+############
+export CMAKE_PREFIX_PATH=$HOME/anaconda3
+# >>> conda init >>>
+# !! Contents within this block are managed by 'conda init' !!
+__conda_setup="$(CONDA_REPORT_ERRORS=false '$HOME/anaconda3/bin/conda' shell.bash hook 2> /dev/null)"
+if [ $? -eq 0 ]; then
+    \eval "$__conda_setup"
+else
+    if [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
+        . "$HOME/anaconda3/etc/profile.d/conda.sh"
+        CONDA_CHANGEPS1=false conda activate base
+    else
+        \export PATH="$HOME/anaconda3/bin:$PATH"
+    fi
+fi
+unset __conda_setup
+# <<< conda init <<<
+<% end %>
