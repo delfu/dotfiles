@@ -1,10 +1,13 @@
 [user]
 	name = Delong Fu
-	email = delongfu@gmail.com
+	email = delong.fu@airbnb.com
 [core]
 	editor = vim
 	autocrlf = input
 	ignorecase = true
+	precomposeunicode = true
+	excludesfile = /Users/delong_fu/.gitignore_global
+	sparseCheckout = true
 [alias]
 	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)%Creset' --abbrev-commit
 	ls = !git ls-files -m | xargs
@@ -16,6 +19,8 @@
 	forget = update-index --skip-worktree 
 	unforget = update-index --no-skip-worktree 
 	cp = cherry-pick
+	root = rev-parse --show-toplevel
+	rename = !export old_branch=":$(git rev-parse --abbrev-ref HEAD)" && git branch -m $1 && git push -f origin $old_branch
 [color]
 	status = auto
 	ui = true
@@ -30,3 +35,16 @@
 	default = current
 [init]
 	templatedir = ~/.git-templates
+[rerere]
+	enabled = true
+[hub]
+	host = git.musta.ch
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[protocol]
+	version = 2
+[feature]
+	manyFiles = true
