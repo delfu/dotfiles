@@ -9,7 +9,7 @@ git clone https://github.com/dlfu/dotfiles.git
 cd dotfiles
 git submodule init
 git submodule update
-rake install
+rake
 ```
 
 ## What does it do? 
