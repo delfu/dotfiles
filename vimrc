@@ -152,3 +152,9 @@ set noerrorbells visualbell t_vb=
 autocmd GUIEnter * set visualbell t_vb=
 
 autocmd FileType * setlocal formatoptions-=c formatoptions-=r formatoptions-=o
+
+""""""""""""""""""""""""""
+" Turn off folding
+"""""""""""""""""""""""""
+map <S-j> j
+map <S-k> k
