@@ -1,6 +1,6 @@
 [user]
 	name = Delong Fu
-	email = delong.fu@airbnb.com
+	email = delongfu@gmail.com
 [core]
 	editor = vim
 	autocrlf = input
@@ -21,6 +21,7 @@
 	cp = cherry-pick
 	root = rev-parse --show-toplevel
 	rename = !export old_branch=":$(git rev-parse --abbrev-ref HEAD)" && git branch -m $1 && git push -f origin $old_branch
+	close = !export tobedeleted=`git branch --show-current` && git sync master && git checkout master && git branch -D $tobedeleted && git prune && git fetch --prune
 [color]
 	status = auto
 	ui = true

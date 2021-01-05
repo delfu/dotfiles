@@ -34,3 +34,6 @@
 [submodule "vim/bundle/vim-gitgutter"]
 	path = vim/bundle/vim-gitgutter
 	url = git://github.com/airblade/vim-gitgutter.git
+[submodule "lib/zsh-autoenv"]
+	path = lib/zsh-autoenv
+	url = https://github.com/Tarrasch/zsh-autoenv.git
