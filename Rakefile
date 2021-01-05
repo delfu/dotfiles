@@ -5,6 +5,10 @@ desc "install the dot files into user's home directory"
 task :install do
   install_homebrew if RUBY_PLATFORM.downcase.include?("darwin") 
   install_oh_my_zsh
+  install_bins
+end
+
+task default: [:install] do
   switch_to_zsh
   replace_all = false
   files = Dir['*'] - %w[Rakefile README.rdoc LICENSE oh-my-zsh retired]
@@ -111,4 +115,10 @@ def install_homebrew
   run %{brew install ack}
   puts
   puts
+end
+
+# install other binaries
+def install_bins
+  run %{wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash}
+  run %{brew install bat}
 end
