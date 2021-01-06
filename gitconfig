@@ -21,6 +21,7 @@
 	cp = cherry-pick
 	root = rev-parse --show-toplevel
 	rename = !export old_branch=":$(git rev-parse --abbrev-ref HEAD)" && git branch -m $1 && git push -f origin $old_branch
+	prom = !git sync master && git rebase master
 	close = !export tobedeleted=`git branch --show-current` && git sync master && git checkout master && git branch -D $tobedeleted && git prune && git fetch --prune
 [color]
 	status = auto
@@ -49,3 +50,5 @@
 	version = 2
 [feature]
 	manyFiles = true
+[pull]
+	rebase = true
