@@ -1,3 +1,8 @@
+""""""""""""""""""""""""""
+" Turn off folding
+"""""""""""""""""""""""""
+noremap <S-j> j
+noremap <S-k> k
 
 """""""""""""""""""""""""""""""""""""""""""""
 " Environment + Visual Settings
@@ -53,47 +58,12 @@ set shiftwidth=4
 set cinkeys=0{,0},:,0#,!^F
 
 
-""""""""""""""""""""""""
-" FileType Management
-""""""""""""""""""""""""
-:filetype on
-autocmd BufNewFile,BufRead  *.md   source ~/.vim/markdown.vim
-autocmd BufNewFile,BufRead  *.md,*.html,*.xml  source ~/.vim/closetag.vim
-autocmd BufNewFile,BufRead  *.py  source ~/.vim/python.vim
-autocmd BufNewFile,BufRead  *.rb  source ~/.vim/ruby.vim
-autocmd BufNewFile,BufRead  *.haml  source ~/.vim/haml.vim
-autocmd BufNewFile,BufRead  *.sass set expandtab
-source ~/.vim/supertab.vim
-filetype plugin on
-
-
 """""""""""""""""
 " Paste Toggle
 """""""""""""""""
 nnoremap <C-p> :set invpaste paste?<CR>
 set pastetoggle=<C-p>
 set showmode
-
-"""""""""""""""""""""
-" Configure Pathogen
-"""""""""""""""""""""
-
-call pathogen#infect()
-Helptags
-
-""""""""""""""""""""""
-" NERD TREE
-""""""""""""""""""""""
-
-noremap <C-t> :NERDTreeToggle<CR>
-noremap <C-f> :NERDTreeFind<CR>
-let g:NERDTreeMapActivateNode="<Tab>"
-
-"""""""""""""""""""""""""""""
-"" Rainbow Parenthesis Enable
-"""""""""""""""""""""""""""""
-
-au VimEnter * RainbowParenthesesToggleAll
 
 """""""""""""""""""""""""""
 "" Surround plugings
@@ -104,13 +74,6 @@ noremap q' ysiw'
 "nnoremap q\" ysiw\"
 "nnoremap q] ysiw]
 "nnoremap q) ysiw)
-
-"""""""""""""""""""""""
-"" Syntastic Config
-"""""""""""""""""""""""
-
-let g:syntastic_mode_map = { 'mode' : 'passive' , 'active_filetypes' : [] , 'passive_filetypes': [] }
-noremap <C-e> :SyntasticToggleMode<CR> 
 
 """"""""""""""""""""""
 " Solarized 
@@ -126,24 +89,6 @@ colorscheme monokai
 imap <F8> <ESC>:TagbarToggle<CR>
 nmap <F8> :TagbarToggle<CR>
 
-""""""""""""""""""""""""
-" Powerline
-"""""""""""""""""""""""""
-set nocompatible   " Disable vi-compatibility
-set laststatus=2   " Always show the statusline
-set encoding=utf-8 " Necessary to show Unicode glyphs
-"let g:Powerline_symbols = 'fancy'"
-
-""""""""""""""""""""""""""
-" Git Gutter
-""""""""""""""""""""""""""
-highlight clear SignColumn
-
-set ic
-set hlsearch
-set nowrap
-
-filetype plugin indent on
 
 """"""""""""""""""""""""""
 " Turn off bell
@@ -152,9 +97,3 @@ set noerrorbells visualbell t_vb=
 autocmd GUIEnter * set visualbell t_vb=
 
 autocmd FileType * setlocal formatoptions-=c formatoptions-=r formatoptions-=o
-
-""""""""""""""""""""""""""
-" Turn off folding
-"""""""""""""""""""""""""
-map <S-j> j
-map <S-k> k
