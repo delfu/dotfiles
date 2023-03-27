@@ -1,0 +1,15 @@
+export FIGMA_PATH="/Users/delongfu/figma/figma"
+cd $FIGMA_PATH
+git stash
+branch=`git branch --show-current`
+if [ $branch != "master" ]
+then
+	git sync master && git rebase master
+else
+	git pull
+fi
+if [[ `git status --porcelain` ]]; then
+	echo "Something is unclean. stash pop manually"
+else
+	git stash pop
+fi

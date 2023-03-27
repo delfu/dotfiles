@@ -6,6 +6,7 @@ task :install do
   install_homebrew if RUBY_PLATFORM.downcase.include?("darwin") 
   install_oh_my_zsh
   install_bins
+  install_git_commands
 end
 
 task default: [:install] do
@@ -122,3 +123,7 @@ def install_bins
   run %{wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.37.2/install.sh | bash}
   run %{brew install bat}
 end
+
+# install the custom git commands into /usr/local/bin
+def install_git_commands
+  system %Q{cp -r git-commands/* /usr/local/bin/}
