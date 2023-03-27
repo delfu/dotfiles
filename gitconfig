@@ -1,12 +1,12 @@
 [user]
 	name = Delong Fu
-	email = delongfu@gmail.com
+	email = dfu@figma.com
 [core]
 	editor = vim
 	autocrlf = input
 	ignorecase = true
 	precomposeunicode = true
-	excludesfile = /Users/delong_fu/.gitignore_global
+	excludesfile = /Users/delongfu/.gitignore_global
 	sparseCheckout = true
 [alias]
 	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)%Creset' --abbrev-commit
@@ -14,15 +14,19 @@
 	cm = commit -m
 	po = push origin
 	undo = checkout --
-	amend = commit --amend
+	amend = commit --amend --no-edit
 	sync = !git fetch origin $1:$1
 	forget = update-index --skip-worktree 
 	unforget = update-index --no-skip-worktree 
 	cp = cherry-pick
+	p = push -u
 	root = rev-parse --show-toplevel
 	rename = !export old_branch=":$(git rev-parse --abbrev-ref HEAD)" && git branch -m $1 && git push -f origin $old_branch
-	prom = !git sync master && git rebase master
 	close = !export tobedeleted=`git branch --show-current` && git sync master && git checkout master && git branch -D $tobedeleted && git prune && git fetch --prune
+	pr = !open https://github.com/figma/figma/compare/`git rev-parse --abbrev-ref HEAD`?expand=1
+	ci = !open https://app.circleci.com/pipelines/github/figma/figma?branch=`git rev-parse --abbrev-ref HEAD`
+	dc = diff --cached
+	unstage = restore --staged
 [color]
 	status = auto
 	ui = true
@@ -35,6 +39,7 @@
 	new = magenta
 [push]
 	default = current
+	autoSetupRemote = true
 [init]
 	templatedir = ~/.git-templates
 [rerere]
@@ -51,4 +56,6 @@
 [feature]
 	manyFiles = true
 [pull]
-	rebase = true
+	rebase = false
+[credential]
+	helper = store
