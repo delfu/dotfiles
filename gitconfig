@@ -13,7 +13,6 @@
 	ls = !git ls-files -m | xargs
 	cm = commit -m
 	po = push origin
-	undo = checkout --
 	amend = commit --amend --no-edit
 	sync = !git fetch origin $1:$1
 	forget = update-index --skip-worktree 
@@ -21,12 +20,11 @@
 	cp = cherry-pick
 	p = push -u
 	root = rev-parse --show-toplevel
+	ss= !git commit --message "WIP" && git stash -u && git reset --soft HEAD^
 	rename = !export old_branch=":$(git rev-parse --abbrev-ref HEAD)" && git branch -m $1 && git push -f origin $old_branch
 	close = !export tobedeleted=`git branch --show-current` && git sync master && git checkout master && git branch -D $tobedeleted && git prune && git fetch --prune
 	pr = !open https://github.com/figma/figma/compare/`git rev-parse --abbrev-ref HEAD`?expand=1
-	ci = !open https://app.circleci.com/pipelines/github/figma/figma?branch=`git rev-parse --abbrev-ref HEAD`
 	dc = diff --cached
-	unstage = restore --staged
 [color]
 	status = auto
 	ui = true

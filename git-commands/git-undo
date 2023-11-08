@@ -1,0 +1,49 @@
+#!/bin/bash
+
+# Function to check if the input is an integer
+is_integer() {
+    local s="$1"
+    # Return true (0) if the input is an integer; otherwise, return false (1)
+    [[ $s =~ ^-?[0-9]+$ ]]
+}
+
+# Check if we have at least one argument
+if [ "$#" -lt 1 ]; then
+    echo "Usage: git undo <file number to undo | file path>"
+    exit 1
+fi
+
+FILE_INDEX="$1"
+
+# Check if the argument is a number
+if ! is_integer "$FILE_INDEX"; then
+	git checkout -- "$1"
+    exit 0
+fi
+
+# Run `git status -s` and parse out files that are currently changed
+# The output format is "XY PATH" where X is the index status and Y is the working tree status.
+# We want files where Y is not a space, which means they are changed.
+changed_files=($(git status --porcelain | awk '/^.[A-Z]/ { print $2 }'))
+
+# Check if we have changed files
+if [ "${#changed_files[@]}" -eq 0 ]; then
+    echo "No files are changed."
+    exit 1
+fi
+
+# Check if the file number is within the range of changed files
+if [ "$FILE_INDEX" -lt 0 ] || [ "$FILE_INDEX" -ge "${#changed_files[@]}" ]; then
+    echo "Invalid file number: $FILE_NUM. There are only ${#changed_files[@]} changed files."
+    exit 1
+fi
+
+# Run `git restore --staged` on the indexed file
+git checkout -- "${changed_files[$FILE_INDEX]}"
+
+if [ $? -eq 0 ]; then
+    echo "File '${changed_files[$FILE_INDEX]}' has been successfully undone."
+else
+    echo "An error occurred while undoing the file."
+    exit 1
+fi

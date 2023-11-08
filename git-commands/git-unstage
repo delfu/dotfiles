@@ -1,0 +1,54 @@
+#!/bin/bash
+
+# Function to check if the input is an integer
+is_integer() {
+    local s="$1"
+    # Return true (0) if the input is an integer; otherwise, return false (1)
+    [[ $s =~ ^-?[0-9]+$ ]]
+}
+
+# Check if we have at least one argument
+if [ "$#" -lt 1 ]; then
+    echo "Usage: git unstage <file number to unstage | file path>"
+    exit 1
+fi
+
+FILE_INDEX="$1"
+
+# Check if the argument is a number
+if ! is_integer "$FILE_INDEX"; then
+	git restore --staged "$1"
+    exit 0
+fi
+
+# Run `git status -s` and parse out files that are currently staged
+# The output format is "XY PATH" where X is the index status and Y is the working tree status.
+# We want files where X is not a space, which means they are staged.
+# Parse out files that are currently staged using awk
+#staged_files=($(git status --porcelain | awk '$1 != " "' '{ print $2 }'))
+staged_files=($(git status -s | awk '/^[A-Z]/ { print $2 }'))
+
+echo "$staged_files"
+
+
+# Check if we have staged files
+if [ "${#staged_files[@]}" -eq 0 ]; then
+    echo "No files are staged."
+    exit 1
+fi
+
+# Check if the file number is within the range of staged files
+if [ "$FILE_INDEX" -lt 0 ] || [ "$FILE_INDEX" -ge "${#staged_files[@]}" ]; then
+    echo "Invalid file number: $FILE_NUM. There are only ${#staged_files[@]} staged files."
+    exit 1
+fi
+
+# Run `git restore --staged` on the indexed file
+git restore --staged "${staged_files[$FILE_INDEX]}"
+
+if [ $? -eq 0 ]; then
+    echo "File '${staged_files[$FILE_INDEX]}' has been successfully unstaged."
+else
+    echo "An error occurred while unstaging the file."
+    exit 1
+fi
