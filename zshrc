@@ -5,7 +5,7 @@ ZSH=$HOME/.oh-my-zsh
 # Look in ~/.oh-my-zsh/themes/
 # Optionally, if you set this to "random", it'll load a random theme each
 # time that oh-my-zsh is loaded.
-ZSH_THEME="<%= print("ZSH_THEME: 'arrow' or 'miloshadzic': "); STDOUT.flush; STDIN.gets.chomp %>"
+ZSH_THEME="miloshadzic"
 
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
@@ -29,7 +29,7 @@ COMPLETION_WAITING_DOTS="true"
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git osx git-extras heroku rvm rails brew gem bundler sublime)
+plugins=(git macos git-extras heroku rvm rails brew gem bundler sublime)
 
 source $ZSH/oh-my-zsh.sh
 # Customize to your needs...
@@ -39,8 +39,10 @@ export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/X11/bin:/opt/local
 fpath=( $HOME/.zsh/completions $fpath)
 
 # enable autocomplete?
-autoload -U compinit
-compinit
+zstyle ':completion:*:*:git:*' script ~/.zsh/git-completion.bash
+fpath=(~/.zsh $fpath)
+
+autoload -Uz compinit && compinit
 
 ##############
 # LS Alias   #
@@ -62,85 +64,24 @@ alias cd='cd -P' # true path
 alias pwd='pwd -P' # true path
 alias clip='clipcopy'
 alias it='git'
-
 alias less='bat' # use bat instead, has syntax highlighting
-alias code="open -a Visual\ Studio\ Code"
-alias vsc="code"
-
-<%= print("setup RVM? [yn]") %>
-<% if STDIN.gets.chomp == "y" %>
-#################
-# RVM           #
-#################
- [[ -s "$HOME/.rvm/scripts/rvm" ]] && source "$HOME/.rvm/scripts/rvm" # Load RVM into a shell session *as a function*
-<% end %>
-
-<%= print("setup RBENV? [yn]") %>
-<% if STDIN.gets.chomp == "y" %>
-#################
-# RBENV         #
-#################
-eval "$(rbenv init -)"
-<% end %>
-
-<%= print("setup NVM? [yn]") %>
-<% if STDIN.gets.chomp == "y" %>
-#################
-# NVM           #
-#################
-
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
-
-# allows for nvm to auto change version based on existance of .nvmrc file in parent folder
-# place this after nvm initialization!
-autoload -U add-zsh-hook
-load-nvmrc() {
-  local node_version="$(nvm version)"
-  local nvmrc_path="$(nvm_find_nvmrc)"
-
-  if [ -n "$nvmrc_path" ]; then
-    local nvmrc_node_version=$(nvm version "$(cat "${nvmrc_path}")")
-
-    if [ "$nvmrc_node_version" = "N/A" ]; then
-      nvm install
-    elif [ "$nvmrc_node_version" != "$node_version" ]; then
-      nvm use
-    fi
-  elif [ "$node_version" != "$(nvm version default)" ]; then
-    echo "Reverting to nvm default version"
-    nvm use default
-  fi
+alias x='exit'
+alias gti='git' # cuz dyslexic
+alias python="python3"
+function ggb() {
+	git grep --cached -n -e $1 -- . | awk '{split($1,a,":"); print " -L" a[2] ",+1 "  a[1]}' | xargs -L 1 git --no-pager blame
 }
-add-zsh-hook chpwd load-nvmrc
-load-nvmrc
-<% end %>
 
-<%= print("setup Anaconda? [yn]") %>
-<% if STDIN.gets.chomp == "y" %>
-############
-# ANACONDA #
-############
-export CMAKE_PREFIX_PATH=$HOME/anaconda3
-# >>> conda init >>>
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$(CONDA_REPORT_ERRORS=false '$HOME/anaconda3/bin/conda' shell.bash hook 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    \eval "$__conda_setup"
-else
-    if [ -f "$HOME/anaconda3/etc/profile.d/conda.sh" ]; then
-        . "$HOME/anaconda3/etc/profile.d/conda.sh"
-        CONDA_CHANGEPS1=false conda activate base
-    else
-        \export PATH="$HOME/anaconda3/bin:$PATH"
-    fi
-fi
-unset __conda_setup
-# <<< conda init <<<
-<% end %>
+export GOPATH="$HOME/go"
+export PATH="$GOPATH/bin:/Users/delongfu/Library/Python/3.8/bin:$PATH"
+export RACK_ENV=development
+export PKG_CONFIG_PATH="/opt/homebrew/opt/zlib/lib/pkgconfig:/usr/local/opt/zlib/lib/pkgconfig:$PKG_CONFIG_PATH"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/openssl@3/lib/pkgconfig:/usr/local/opt/openssl@3/lib/pkgconfig:$PKG_CONFIG_PATH"
+export PATH="$HOME/.rbenv/shims:$PATH"
+eval "$(rbenv init -)"
+export AWS_CONFIG_FILE="$HOME/figma/figma/config/aws/sso_config"
 
-############
-# Autoenv  #
-############
-source <%= Dir.pwd%>/lib/zsh-autoenv/autoenv.zsh
+#disable mouse accesleration
+defaults write .GlobalPreferences com.apple.mouse.scaling -1
+source ~/.figma.sh
+source /Users/delongfu/.figbt/figbtrc # MANAGED BY FIGBT

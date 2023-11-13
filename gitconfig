@@ -18,7 +18,6 @@
 	forget = update-index --skip-worktree 
 	unforget = update-index --no-skip-worktree 
 	cp = cherry-pick
-	p = push -u
 	root = rev-parse --show-toplevel
 	ss= !git commit --message "WIP" && git stash -u && git reset --soft HEAD^
 	rename = !export old_branch=":$(git rev-parse --abbrev-ref HEAD)" && git branch -m $1 && git push -f origin $old_branch
