@@ -39,9 +39,6 @@ typeset -U path fpath  # dedupe PATH entries
 [[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
 export PATH="$HOME/.local/bin:$PATH"
 
-# custom autocompletes
-fpath=($HOME/.zsh/completions $HOME/.zsh $fpath)
-zstyle ':completion:*:*:git:*' script ~/.zsh/git-completion.bash
 autoload -Uz compinit && compinit
 
 ##############

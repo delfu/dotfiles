@@ -10,12 +10,16 @@ cd dotfiles
 python3 install.py
 ```
 
-This installs oh-my-zsh, Homebrew (+ a few packages) and nvm, copies the custom
-git commands into `~/.local/bin`, and copies the dotfiles into `$HOME`.
+This installs oh-my-zsh, Homebrew, the packages in `Brewfile` and nvm, copies
+the custom git commands into `~/.local/bin`, and copies the dotfiles into
+`$HOME`. It then offers to set up an ed25519 SSH key, log in to GitHub with
+`gh` (which can upload the key), and make zsh your default shell.
+
+To add a package, add it to `Brewfile` and run `brew bundle`.
 
 Options:
 
-- `--dotfiles-only` just copy dotfiles and git commands, skip installing anything
+- `--dotfiles-only` just copy dotfiles and git commands, skip installs and account setup
 - `--dry-run` print what would happen without changing anything
 
 Dotfiles are **copied**, not symlinked, so editing `~/.zshrc` etc. doesn't touch
@@ -33,8 +37,8 @@ Terminal > Settings > Profiles.
 Double check the contents of the files before removing them so you don't lose custom settings.
 
 ```
-rm -rf ~/.vim ~/.zsh ~/.oh-my-zsh
+rm -rf ~/.vim ~/.oh-my-zsh
 rm ~/.vimrc ~/.zshrc ~/.gitconfig ~/.gitignore_global
-rm ~/.local/bin/git-undo ~/.local/bin/git-unstage
+rm ~/.local/bin/git-prom ~/.local/bin/git-undo ~/.local/bin/git-unstage
 chsh -s /bin/bash # change back to Bash if you want
 ```

@@ -8,6 +8,7 @@ up to <name>.bak before being replaced.
 import argparse
 import filecmp
 import os
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
@@ -16,7 +17,6 @@ REPO_DIR = Path(__file__).resolve().parent
 HOME_DIR = Path.home()
 LOCAL_BIN = HOME_DIR / ".local" / "bin"
 OH_MY_ZSH_DIR = HOME_DIR / ".oh-my-zsh"
-BREW_PACKAGES = ["ack", "bat", "gh", "git-lfs"]
 NVM_VERSION = "v0.40.3"
 
 # repo path -> destination in $HOME
@@ -24,7 +24,6 @@ DOTFILES = {
     "zshrc": ".zshrc",
     "vimrc": ".vimrc",
     "vim": ".vim",
-    "zsh": ".zsh",
     "gitconfig": ".gitconfig",
     "gitignore_global": ".gitignore_global",
     "KeyBindings/DefaultKeyBinding.dict": "Library/KeyBindings/DefaultKeyBinding.dict",
@@ -71,9 +70,9 @@ def install_homebrew():
 def install_bins():
     brew = brew_path()
     if brew:
-        run(f"{brew} install {' '.join(BREW_PACKAGES)}")
+        run(f"{brew} bundle --file={REPO_DIR / 'Brewfile'}")
     else:
-        print("brew not found, skipping packages: " + " ".join(BREW_PACKAGES))
+        print("brew not found, skipping Brewfile packages")
 
     if (HOME_DIR / ".nvm").exists():
         print("found ~/.nvm")
@@ -138,14 +137,59 @@ def copy_dotfiles():
         copy(REPO_DIR / src, HOME_DIR / dest)
 
 
-def configure_git_email():
+def git_email():
     result = subprocess.run(["git", "config", "--global", "user.email"], capture_output=True, text=True)
-    if result.stdout.strip():
-        print(f"git user.email is {result.stdout.strip()}")
+    return result.stdout.strip()
+
+
+def configure_git_email():
+    if git_email():
+        print(f"git user.email is {git_email()}")
         return
     email = input("git user.email for this machine (blank to skip): ").strip()
     if email:
-        run(f"git config --global user.email {email!r}")
+        run(f"git config --global user.email {shlex.quote(email)}")
+
+
+def setup_ssh_key():
+    key = HOME_DIR / ".ssh" / "id_ed25519"
+    if key.exists():
+        print(f"found {key}")
+        return
+    if not confirm("generate an ed25519 SSH key?"):
+        return
+    if not DRY_RUN:
+        key.parent.mkdir(mode=0o700, exist_ok=True)
+    run(f"ssh-keygen -t ed25519 -C {shlex.quote(git_email() or os.environ.get('USER', ''))} -f {key}")
+    # store the passphrase in the macOS keychain and load the key automatically
+    ssh_config = HOME_DIR / ".ssh" / "config"
+    if not ssh_config.exists() or "UseKeychain" not in ssh_config.read_text():
+        print(f"adding keychain settings to {ssh_config}")
+        if not DRY_RUN:
+            with ssh_config.open("a") as f:
+                f.write(f"\nHost *\n  AddKeysToAgent yes\n  UseKeychain yes\n  IdentityFile {key}\n")
+    run(f"ssh-add --apple-use-keychain {key}", check=False)
+
+
+def gh_login():
+    # on a fresh machine Homebrew's bin dir isn't on this process's PATH yet
+    brew = brew_path()
+    gh = shutil.which("gh") or (brew and shutil.which("gh", path=os.path.dirname(brew)))
+    if not gh:
+        print("gh not found, skipping GitHub login")
+        return
+    if subprocess.run([gh, "auth", "status"], capture_output=True).returncode == 0:
+        print("already logged in to GitHub")
+    elif confirm("log in to GitHub with gh? (it can also upload your SSH key)"):
+        run(f"{gh} auth login", check=False)
+
+
+def set_default_shell():
+    zsh = shutil.which("zsh") or "/bin/zsh"
+    if os.environ.get("SHELL", "").endswith("/zsh"):
+        print("default shell is already zsh")
+    elif confirm("make zsh your default shell?"):
+        run(f"chsh -s {zsh}")
 
 
 def configure_macos():
@@ -169,6 +213,10 @@ def main():
     install_git_commands()
     copy_dotfiles()
     configure_git_email()
+    if not args.dotfiles_only:
+        setup_ssh_key()
+        gh_login()
+        set_default_shell()
     print("\nDone. Import colors.terminal manually in Terminal > Settings > Profiles if you want the color scheme.")
 
 
