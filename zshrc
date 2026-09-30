@@ -29,19 +29,19 @@ COMPLETION_WAITING_DOTS="true"
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git macos git-extras heroku rvm rails brew gem bundler sublime)
+plugins=(git macos git-extras brew)
 
 source $ZSH/oh-my-zsh.sh
 # Customize to your needs...
-export PATH=/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/X11/bin:/opt/local/bin:/opt/local/sbin:$PATH
+typeset -U path fpath  # dedupe PATH entries
+
+# Homebrew (Apple Silicon). Login shells usually get this from ~/.zprofile too.
+[[ -x /opt/homebrew/bin/brew ]] && eval "$(/opt/homebrew/bin/brew shellenv)"
+export PATH="$HOME/.local/bin:$PATH"
 
 # custom autocompletes
-fpath=( $HOME/.zsh/completions $fpath)
-
-# enable autocomplete?
+fpath=($HOME/.zsh/completions $HOME/.zsh $fpath)
 zstyle ':completion:*:*:git:*' script ~/.zsh/git-completion.bash
-fpath=(~/.zsh $fpath)
-
 autoload -Uz compinit && compinit
 
 ##############
@@ -59,7 +59,6 @@ dircolors
 #################
 
 alias claer='clear'			# autocorrect bad spelling
-alias rm='rm' 			# precautionary
 alias cd='cd -P' # true path
 alias pwd='pwd -P' # true path
 alias clip='clipcopy'
@@ -73,15 +72,38 @@ function ggb() {
 }
 
 export GOPATH="$HOME/go"
-export PATH="$GOPATH/bin:/Users/delongfu/Library/Python/3.8/bin:$PATH"
-export RACK_ENV=development
-export PKG_CONFIG_PATH="/opt/homebrew/opt/zlib/lib/pkgconfig:/usr/local/opt/zlib/lib/pkgconfig:$PKG_CONFIG_PATH"
-export PKG_CONFIG_PATH="/opt/homebrew/opt/openssl@3/lib/pkgconfig:/usr/local/opt/openssl@3/lib/pkgconfig:$PKG_CONFIG_PATH"
-export PATH="$HOME/.rbenv/shims:$PATH"
-eval "$(rbenv init -)"
-export AWS_CONFIG_FILE="$HOME/figma/figma/config/aws/sso_config"
+export PATH="$GOPATH/bin:$PATH"
+export PKG_CONFIG_PATH="/opt/homebrew/opt/zlib/lib/pkgconfig:/opt/homebrew/opt/openssl@3/lib/pkgconfig:$PKG_CONFIG_PATH"
 
-#disable mouse accesleration
-defaults write .GlobalPreferences com.apple.mouse.scaling -1
-source ~/.figma.sh
-source /Users/delongfu/.figbt/figbtrc # MANAGED BY FIGBT
+command -v rbenv >/dev/null && eval "$(rbenv init - zsh)"
+
+# nvm: load it here (not only in ~/.zprofile) so non-login shells get it too,
+# then auto-switch node versions based on .nvmrc
+export NVM_DIR="$HOME/.nvm"
+if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+  source "$NVM_DIR/nvm.sh"
+  autoload -U add-zsh-hook
+  load-nvmrc() {
+    local node_version="$(nvm version)"
+    local nvmrc_path="$(nvm_find_nvmrc)"
+
+    if [ -n "$nvmrc_path" ]; then
+      local nvmrc_node_version=$(nvm version "$(cat "${nvmrc_path}")")
+
+      if [ "$nvmrc_node_version" = "N/A" ]; then
+        nvm install
+      elif [ "$nvmrc_node_version" != "$node_version" ]; then
+        nvm use
+      fi
+    elif [ "$node_version" != "$(nvm version default)" ]; then
+      echo "Reverting to nvm default version"
+      nvm use default
+    fi
+  }
+  add-zsh-hook chpwd load-nvmrc
+  load-nvmrc
+fi
+
+# Machine- or work-specific settings (AWS profiles, company tooling, etc.) go in
+# ~/.zshrc.local, which is not tracked in this repo.
+[[ -f ~/.zshrc.local ]] && source ~/.zshrc.local

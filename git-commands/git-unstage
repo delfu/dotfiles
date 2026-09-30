@@ -25,11 +25,7 @@ fi
 # The output format is "XY PATH" where X is the index status and Y is the working tree status.
 # We want files where X is not a space, which means they are staged.
 # Parse out files that are currently staged using awk
-#staged_files=($(git status --porcelain | awk '$1 != " "' '{ print $2 }'))
 staged_files=($(git status -s | awk '/^[A-Z]/ { print $2 }'))
-
-echo "$staged_files"
-
 
 # Check if we have staged files
 if [ "${#staged_files[@]}" -eq 0 ]; then
@@ -39,7 +35,7 @@ fi
 
 # Check if the file number is within the range of staged files
 if [ "$FILE_INDEX" -lt 0 ] || [ "$FILE_INDEX" -ge "${#staged_files[@]}" ]; then
-    echo "Invalid file number: $FILE_NUM. There are only ${#staged_files[@]} staged files."
+    echo "Invalid file number: $FILE_INDEX. There are only ${#staged_files[@]} staged files."
     exit 1
 fi
 

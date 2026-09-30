@@ -65,30 +65,11 @@ nnoremap <C-p> :set invpaste paste?<CR>
 set pastetoggle=<C-p>
 set showmode
 
-"""""""""""""""""""""""""""
-"" Surround plugings
-""""""""""""""""""""""""""
-
-noremap q' ysiw'
-
-"nnoremap q\" ysiw\"
-"nnoremap q] ysiw]
-"nnoremap q) ysiw)
-
 """"""""""""""""""""""
-" Solarized 
+" Colors
 """""""""""""""""""""
 set background=dark
-let g:solarized_termcolors=256
-"colorscheme solarized
 colorscheme monokai
-
-"""""""""""""""""""""""
-" Tagbars
-""""""""""""""""""""""
-imap <F8> <ESC>:TagbarToggle<CR>
-nmap <F8> :TagbarToggle<CR>
-
 
 """"""""""""""""""""""""""
 " Turn off bell

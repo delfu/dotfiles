@@ -1,13 +1,12 @@
 [user]
 	name = Delong Fu
-	email = dfu@figma.com
+	# email is set per machine by install.py (git config --global user.email)
 [core]
 	editor = vim
 	autocrlf = input
 	ignorecase = true
 	precomposeunicode = true
-	excludesfile = /Users/delongfu/.gitignore_global
-	sparseCheckout = true
+	excludesfile = ~/.gitignore_global
 [alias]
 	lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)%Creset' --abbrev-commit
 	ls = !git ls-files -m | xargs
@@ -22,7 +21,7 @@
 	ss= !git commit --message "WIP" && git stash -u && git reset --soft HEAD^
 	rename = !export old_branch=":$(git rev-parse --abbrev-ref HEAD)" && git branch -m $1 && git push -f origin $old_branch
 	close = !export tobedeleted=`git branch --show-current` && git sync master && git checkout master && git branch -D $tobedeleted && git prune && git fetch --prune
-	pr = !open https://github.com/figma/figma/compare/`git rev-parse --abbrev-ref HEAD`?expand=1
+	pr = "!f() { if ! command -v gh >/dev/null; then echo 'git pr: gh is not installed (brew install gh)' >&2; return 1; fi; gh pr create --web; }; f"
 	dc = diff --cached
 [color]
 	status = auto
@@ -37,12 +36,8 @@
 [push]
 	default = current
 	autoSetupRemote = true
-[init]
-	templatedir = ~/.git-templates
 [rerere]
 	enabled = true
-[hub]
-	host = git.musta.ch
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
@@ -55,4 +50,4 @@
 [pull]
 	rebase = false
 [credential]
-	helper = store
+	helper = osxkeychain

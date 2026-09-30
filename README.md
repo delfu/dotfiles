@@ -1,39 +1,40 @@
 #  Dot Files for Delong
 
-Inspired by [ryanb](https://github.com/ryanb/dotfiles) and [skwp](https://github.com/skwp/dotfiles) 
+Inspired by [ryanb](https://github.com/ryanb/dotfiles) and [skwp](https://github.com/skwp/dotfiles)
 
 ## Install
 
 ```
-git clone https://github.com/dlfu/dotfiles.git
+git clone https://github.com/delfu/dotfiles.git
 cd dotfiles
-git submodule init
-git submodule update
-rake
+python3 install.py
 ```
 
-## What does it do? 
+This installs oh-my-zsh, Homebrew (+ a few packages) and nvm, copies the custom
+git commands into `~/.local/bin`, and copies the dotfiles into `$HOME`.
 
-Vim Plugins - to make your vim look like this
-![vim sample](http://i.imgur.com/W6vjEs5.png)
+Options:
 
-I use zsh and in particular oh-my-zsh
+- `--dotfiles-only` just copy dotfiles and git commands, skip installing anything
+- `--dry-run` print what would happen without changing anything
 
-OSX and Linux compatible
+Dotfiles are **copied**, not symlinked, so editing `~/.zshrc` etc. doesn't touch
+this repo. Changes you want to keep have to be copied back here by hand. Any
+existing file that differs is backed up to `<name>.bak` before being replaced.
+
+Machine- or work-specific shell settings go in `~/.zshrc.local`, which `zshrc`
+sources if it exists. `install.py` asks for `git user.email` per machine.
+
+The Terminal.app color scheme (`colors.terminal`) has to be imported by hand in
+Terminal > Settings > Profiles.
 
 ## Uninstall
 
-To remove the dotfile configs, run the following commands. Be certain to double check the contents of the files before removing so you don't lose custom settings.
+Double check the contents of the files before removing them so you don't lose custom settings.
 
 ```
-unlink ~/.bin
-unlink ~/.gitignore
-unlink ~/.vim
-unlink ~/.vimrc
-rm ~/.zshrc # careful here
-rm ~/.gitconfig
-rm -rf ~/.dotfiles
-rm -rf ~/.oh-my-zsh
+rm -rf ~/.vim ~/.zsh ~/.oh-my-zsh
+rm ~/.vimrc ~/.zshrc ~/.gitconfig ~/.gitignore_global
+rm ~/.local/bin/git-undo ~/.local/bin/git-unstage
 chsh -s /bin/bash # change back to Bash if you want
 ```
-

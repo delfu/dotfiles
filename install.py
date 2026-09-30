@@ -1,104 +1,176 @@
-import subprocess
+#!/usr/bin/env python3
+"""Set up a new machine from this dotfiles repo.
+
+Dotfiles are *copied* into $HOME (not symlinked), so edits made in $HOME
+don't show up as changes in this repo. Existing files that differ are backed
+up to <name>.bak before being replaced.
+"""
+import argparse
+import filecmp
 import os
-import getopt, sys
 import shutil
+import subprocess
 from pathlib import Path
-from string import Template
 
-# HOME_DIR = os.environ['HOME']
-BIN_DIR = "/usr/local/bin"
+REPO_DIR = Path(__file__).resolve().parent
+HOME_DIR = Path.home()
+LOCAL_BIN = HOME_DIR / ".local" / "bin"
+OH_MY_ZSH_DIR = HOME_DIR / ".oh-my-zsh"
+BREW_PACKAGES = ["ack", "bat", "gh", "git-lfs"]
+NVM_VERSION = "v0.40.3"
 
-def run(cmd):
-    print(f"[Running] {cmd}")
-    if os.environ.get('DEBUG') != '1':
-        subprocess.run(cmd, shell=True, check=True)
+# repo path -> destination in $HOME
+DOTFILES = {
+    "zshrc": ".zshrc",
+    "vimrc": ".vimrc",
+    "vim": ".vim",
+    "zsh": ".zsh",
+    "gitconfig": ".gitconfig",
+    "gitignore_global": ".gitignore_global",
+    "KeyBindings/DefaultKeyBinding.dict": "Library/KeyBindings/DefaultKeyBinding.dict",
+}
 
-# install oh-my-zsh
+DRY_RUN = False
+
+
+def run(cmd, check=True):
+    print(f"[run] {cmd}")
+    if not DRY_RUN:
+        subprocess.run(cmd, shell=True, check=check)
+
+
+def confirm(question):
+    response = input(f"{question} [ynq] ").strip().lower()
+    if response == "q":
+        raise SystemExit(0)
+    return response == "y"
+
+
 def install_oh_my_zsh():
-    oh_my_zsh_dir = os.path.join(HOME_DIR, ".oh-my-zsh")
-    if os.path.exists(oh_my_zsh_dir):
+    if OH_MY_ZSH_DIR.exists():
         print("found ~/.oh-my-zsh")
+    elif confirm("install oh-my-zsh?"):
+        run(f"git clone https://github.com/ohmyzsh/ohmyzsh.git {OH_MY_ZSH_DIR}")
     else:
-        response = input("install oh-my-zsh? [ynq] ")
-        if response == 'y':
-            print("installing oh-my-zsh")
-            subprocess.run(["git", "clone", "https://github.com/robbyrussell/oh-my-zsh.git", oh_my_zsh_dir], check=True)
-        elif response == 'q':
-            exit()
-        else:
-            print("skipping oh-my-zsh, you will need to change ~/.zshrc")
-    print("Copying custom themes")
-    subprocess.run([f"cp -r themes/* {oh_my_zsh_dir}/themes"], shell=True, check=False)
+        print("skipping oh-my-zsh, you will need to change ~/.zshrc")
 
-# install homebrew
+
+def brew_path():
+    return shutil.which("brew") or next(
+        (p for p in ("/opt/homebrew/bin/brew", "/usr/local/bin/brew") if os.path.exists(p)), None
+    )
+
+
 def install_homebrew():
-    print("Installing Homebrew, the OSX package manager...If it's already installed, this will do nothing.")
+    if brew_path():
+        print("found Homebrew")
+        return
     run('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"')
-    print("Installing Homebrew packages...There may be some warnings.")
 
-# installing optional binaries
+
 def install_bins():
-    run('curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash')
-    run('brew install ack')
-    run('brew install bat')
+    brew = brew_path()
+    if brew:
+        run(f"{brew} install {' '.join(BREW_PACKAGES)}")
+    else:
+        print("brew not found, skipping packages: " + " ".join(BREW_PACKAGES))
 
-# install custom git commands to /usr/local/bin. This path is defined in PATH in .zshrc
+    if (HOME_DIR / ".nvm").exists():
+        print("found ~/.nvm")
+    else:
+        # PROFILE=/dev/null stops the nvm installer from appending to ~/.zshrc; our zshrc loads nvm itself
+        run(f"curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/{NVM_VERSION}/install.sh | PROFILE=/dev/null bash")
+
+
+# install custom git commands to ~/.local/bin, which zshrc puts on PATH
 def install_git_commands():
     print("Installing custom git commands")
-    git_commands_source = os.path.join(os.getcwd(), "git-commands")
-    git_commands_destination = BIN_DIR 
-    for command in os.listdir(git_commands_source):
-        if os.path.isfile(os.path.join(git_commands_source, command)):
-            print(f"Copying {command} to {git_commands_destination}")
-            subprocess.run(["cp", os.path.join(git_commands_source, command), git_commands_destination], check=True)
+    if not DRY_RUN:
+        LOCAL_BIN.mkdir(parents=True, exist_ok=True)
+    for command in sorted((REPO_DIR / "git-commands").iterdir()):
+        if command.is_file():
+            copy(command, LOCAL_BIN / command.name)
 
 
-def link_file(file):
-    home_file = Path(HOME_DIR) / f".{file.name}"
-    print(f"linking {HOME_DIR}/{home_file.name}")
-    try:
-        home_file.symlink_to(Path(os.getcwd()) / file)
-    except FileExistsError:
-        home_file.unlink()  # Remove the existing file if exists.
-        home_file.symlink_to(Path(os.getcwd()) / file)
+def same(src, dest):
+    if dest.is_symlink() or not dest.exists():
+        return False
+    if src.is_dir():
+        if not dest.is_dir():
+            return False
+        cmp = filecmp.dircmp(src, dest)
+        return not (cmp.left_only or cmp.right_only or cmp.diff_files or cmp.funny_files) and all(
+            same(src / d, dest / d) for d in cmp.common_dirs
+        )
+    return dest.is_file() and filecmp.cmp(src, dest, shallow=False)
 
-def copy_files():
-    objects = os.scandir()
-    ignore = ["README.md", "LICENSE", "Rakefile", "install.py", ".gitmodules", ".git", ".DS_Store", "themes", ".gitignore", "git-commands"]
-    for obj in objects:
-        if obj.name in ignore:
-            continue
-        link_file(obj)
+
+def copy(src, dest):
+    if same(src, dest):
+        print(f"up to date: {dest}")
+        return
+    if dest.is_symlink():
+        # e.g. a leftover symlink from the old install into this repo
+        print(f"removing symlink {dest} -> {os.readlink(dest)}")
+        if not DRY_RUN:
+            dest.unlink()
+    elif dest.exists():
+        backup = dest.with_name(dest.name + ".bak")
+        print(f"backing up {dest} -> {backup}")
+        if not DRY_RUN:
+            if backup.is_dir() and not backup.is_symlink():
+                shutil.rmtree(backup)
+            elif backup.exists() or backup.is_symlink():
+                backup.unlink()
+            dest.rename(backup)
+    print(f"copying {src.relative_to(REPO_DIR)} -> {dest}")
+    if DRY_RUN:
+        return
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    if src.is_dir():
+        shutil.copytree(src, dest, symlinks=True)
+    else:
+        shutil.copy2(src, dest)
+
+
+def copy_dotfiles():
+    for src, dest in DOTFILES.items():
+        copy(REPO_DIR / src, HOME_DIR / dest)
+
+
+def configure_git_email():
+    result = subprocess.run(["git", "config", "--global", "user.email"], capture_output=True, text=True)
+    if result.stdout.strip():
+        print(f"git user.email is {result.stdout.strip()}")
+        return
+    email = input("git user.email for this machine (blank to skip): ").strip()
+    if email:
+        run(f"git config --global user.email {email!r}")
+
+
+def configure_macos():
+    # disable mouse acceleration (takes effect after logging out and back in)
+    run("defaults write .GlobalPreferences com.apple.mouse.scaling -1")
 
 
 def main():
-    # Remove 1st argument from the
-    # list of command line arguments
-    argumentList = sys.argv[1:]
-    # Options
-    options = "h:"
-    # Long options
-    long_options = ["help"]
-    
-    try:
-        # Parsing argument
-        arguments, values = getopt.getopt(argumentList, options, long_options)
-        if len(arguments) == 0: 
-            print ("Install from scratch")
-            install_oh_my_zsh()
-            install_homebrew()
-            install_bins()
-            install_git_commands()
-            copy_files()
-        else:
-            for currentArgument, currentValue in arguments:
-                if currentArgument in ("-h", "--help"):
-                    print("Displaying help")
+    global DRY_RUN
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--dry-run", action="store_true", help="print what would happen without changing anything")
+    parser.add_argument("--dotfiles-only", action="store_true", help="only copy dotfiles and git commands, skip installs")
+    args = parser.parse_args()
+    DRY_RUN = args.dry_run or os.environ.get("DEBUG") == "1"
 
-    except getopt.error as err:
-        # output error, and return with an error code
-        print (str(err))
+    if not args.dotfiles_only:
+        install_oh_my_zsh()
+        install_homebrew()
+        install_bins()
+        configure_macos()
+    install_git_commands()
+    copy_dotfiles()
+    configure_git_email()
+    print("\nDone. Import colors.terminal manually in Terminal > Settings > Profiles if you want the color scheme.")
+
 
 if __name__ == "__main__":
     main()
-

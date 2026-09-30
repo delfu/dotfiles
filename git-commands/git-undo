@@ -34,7 +34,7 @@ fi
 
 # Check if the file number is within the range of changed files
 if [ "$FILE_INDEX" -lt 0 ] || [ "$FILE_INDEX" -ge "${#changed_files[@]}" ]; then
-    echo "Invalid file number: $FILE_NUM. There are only ${#changed_files[@]} changed files."
+    echo "Invalid file number: $FILE_INDEX. There are only ${#changed_files[@]} changed files."
     exit 1
 fi
 
