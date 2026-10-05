@@ -1,0 +1,91 @@
+#!/bin/bash
+# Find a worktree by its branch name. Prints the worktree's path; the `git`
+# wrapper in zshrc then cds there, since a script can't change your shell's dir.
+#
+#   git wt             list this repo's worktrees
+#   git wt <branch>    print the path of the worktree on <branch>. Tries an exact
+#                      match, then "delong/<branch>"-style suffix, then substring.
+#   git wt -           switch the main checkout to the default branch (e.g.
+#                      staging) and print its path
+#   git wt --branches  list worktree branches, for tab completion
+
+paths=()
+branches=()
+while IFS= read -r line; do
+	case $line in
+		"worktree "*) path=${line#worktree } ;;
+		"branch "*) branch=${line#branch refs/heads/} ;;
+		detached) branch="(detached)" ;;
+		"")
+			# skip worktrees whose folder was deleted
+			if [ -n "$path" ] && [ -d "$path" ]; then
+				paths+=("$path")
+				branches+=("$branch")
+			fi
+			path="" branch=""
+			;;
+	esac
+done < <(git worktree list --porcelain 2>/dev/null; echo)
+
+if [ ${#paths[@]} -eq 0 ]; then
+	echo "git wt: not in a git repository" >&2
+	exit 1
+fi
+
+case $1 in
+	"")
+		top=$(git rev-parse --show-toplevel 2>/dev/null)
+		for i in "${!paths[@]}"; do
+			mark=" "
+			[ "${paths[i]}" = "$top" ] && mark="*"
+			path=${paths[i]}
+			case $path in "$HOME"/*) path="~${path#"$HOME"}" ;; esac
+			printf '%s %-40s %s\n' "$mark" "${branches[i]}" "$path"
+		done
+		exit 0
+		;;
+	--branches)
+		for b in "${branches[@]}"; do
+			[ "$b" != "(detached)" ] && echo "$b"
+		done
+		exit 0
+		;;
+	-)
+		main=${paths[0]}
+		# default branch from origin/HEAD, same as git-prom
+		default=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)
+		default=${default#origin/}
+		if [ -n "$default" ] && [ "$(git -C "$main" branch --show-current)" != "$default" ]; then
+			git -C "$main" switch "$default" >&2
+		fi
+		echo "$main"
+		exit 0
+		;;
+esac
+
+# collect indexes of branches matching $1, trying exact, then suffix, then substring
+hits=()
+for kind in exact suffix substring; do
+	for i in "${!branches[@]}"; do
+		b=${branches[i]}
+		case $kind in
+			exact) [ "$b" = "$1" ] ;;
+			suffix) [[ $b == */"$1" ]] ;;
+			substring) [[ $b == *"$1"* ]] ;;
+		esac && hits+=("$i")
+	done
+	[ ${#hits[@]} -gt 0 ] && break
+done
+
+if [ ${#hits[@]} -eq 1 ]; then
+	echo "${paths[hits[0]]}"
+elif [ ${#hits[@]} -gt 1 ]; then
+	echo "git wt: '$1' matches several worktrees:" >&2
+	for i in "${hits[@]}"; do
+		echo "  ${branches[i]}" >&2
+	done
+	exit 1
+else
+	echo "git wt: no worktree for '$1' (run 'git wt' to list them)" >&2
+	exit 1
+fi

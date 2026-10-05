@@ -68,6 +68,45 @@ function ggb() {
 	git grep --cached -n -e $1 -- . | awk '{split($1,a,":"); print " -L" a[2] ",+1 "  a[1]}' | xargs -L 1 git --no-pager blame
 }
 
+#################
+# Git worktrees #
+#################
+
+# `git wt <branch>` jumps to the worktree on that branch, `git wt -` back to the
+# main checkout. git-commands/git-wt finds the path; this wrapper does the cd,
+# which a git command can't do for your shell.
+function git() {
+	if [[ $1 == wt && -n $2 && $2 != --* ]]; then
+		local dir
+		dir=$(command git wt "${@:2}") && cd "$dir"
+	else
+		command git "$@"
+	fi
+}
+# tab completion for `git wt`, for zsh's git completion and git-completion.bash
+_git-wt() { compadd -M 'l:|=* r:|=*' -- ${(f)"$(command git wt --branches)"} }
+_git_wt() { __gitcomp_nl "$(command git wt --branches)" }
+zstyle ':completion:*:*:git:*' user-commands wt:'jump to a worktree by branch name'
+
+# Prompt: in a linked worktree, show "⎇ <repo>" (plus the current subdir)
+# instead of the worktree's folder name, which is just a slug.
+function _prompt_dir_precmd() {
+	local -a info
+	info=("${(@f)$(git rev-parse --path-format=absolute --git-dir --git-common-dir --show-toplevel 2>/dev/null)}")
+	if (( ${#info} == 3 )) && [[ ${info[1]} != ${info[2]} ]]; then
+		# common dir is /path/<repo>/.git (or /path/<repo>.git when bare)
+		local repo=${info[2]:t}
+		[[ $repo == .git ]] && repo=${info[2]:h:t} || repo=${repo%.git}
+		_prompt_dir="%{$fg[magenta]%}⎇ ${repo//\%/%%}%{$reset_color%}"
+		[[ ${PWD:A} != ${info[3]} ]] && _prompt_dir+=" %{$fg[cyan]%}%1~%{$reset_color%}"
+	else
+		_prompt_dir="%{$fg[cyan]%}%1~%{$reset_color%}"
+	fi
+}
+autoload -U add-zsh-hook
+add-zsh-hook precmd _prompt_dir_precmd
+PROMPT='${_prompt_dir}%{$fg[red]%}|%{$reset_color%}$(git_prompt_info)%{$fg[cyan]%}⇒%{$reset_color%} '
+
 export GOPATH="$HOME/go"
 export PATH="$GOPATH/bin:$PATH"
 export PKG_CONFIG_PATH="/opt/homebrew/opt/zlib/lib/pkgconfig:/opt/homebrew/opt/openssl@3/lib/pkgconfig:$PKG_CONFIG_PATH"
