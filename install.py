@@ -33,6 +33,10 @@ DOTFILES = {
     "agents/claude/mods": ".claude/mods",
 }
 
+# dirs installed entry by entry, so skills and mods that only exist on this machine
+# (e.g. workplace skills in ~/.agents/skills) are left alone
+MERGED_DIRS = {"agents/skills", "agents/claude/mods"}
+
 # symlink in $HOME -> target in $HOME
 SYMLINKS = {
     ".claude/CLAUDE.md": "AGENTS.md",
@@ -143,7 +147,11 @@ def copy(src, dest):
 
 def copy_dotfiles():
     for src, dest in DOTFILES.items():
-        copy(REPO_DIR / src, HOME_DIR / dest)
+        if src in MERGED_DIRS:
+            for entry in sorted((REPO_DIR / src).iterdir()):
+                copy(entry, HOME_DIR / dest / entry.name)
+        else:
+            copy(REPO_DIR / src, HOME_DIR / dest)
 
 
 def link(dest, target):

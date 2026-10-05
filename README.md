@@ -39,7 +39,8 @@ python3 sync.py
 
 It copies every file `install.py` installs back to its place in the repo, deletions
 included, and leaves the changes uncommitted so you can review them with `git diff`.
-It asks before adding or removing a whole skill, Claude mod or git command. It never copies
+Only `df-*` skills are synced; other skills in `~/.agents/skills` are workplace
+specific. It asks before adding or removing a whole skill, Claude mod or git command. It never copies
 `git user.email`. At the end it lists added lines that look work specific: lines
 that mention your git email's company domain, plus any `--flag REGEX` you pass.
 Use `--dry-run` to preview.
@@ -55,6 +56,9 @@ copies `agents/AGENTS.md` to `~/AGENTS.md` and `agents/skills` to
 
 Claude Code's own settings are copied too: `agents/claude/settings.json` to
 `~/.claude/settings.json` and `agents/claude/mods` to `~/.claude/mods`.
+
+Skills and mods are installed one at a time, so ones that only exist on a machine
+(like workplace skills) are left in place.
 
 As with the other dotfiles, edits to a skill or `~/AGENTS.md` have to be synced
 back into `agents/` with `sync.py` to keep them.

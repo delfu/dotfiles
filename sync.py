@@ -5,6 +5,7 @@ Run it on a machine that was already set up, then review the result with
 `git diff` / `git status` before committing. Nothing is committed for you.
 
 Some edits made on a work machine are company specific, so:
+- only df-* skills are synced; other skills are workplace specific
 - adding or removing a whole skill, Claude mod or git command asks first
 - the per-machine git user.email is never copied back
 - lines in the resulting diff that look work specific are listed at the end
@@ -18,11 +19,13 @@ from pathlib import Path
 
 from install import DOTFILES, HOME_DIR, LOCAL_BIN, REPO_DIR, SYMLINKS, confirm
 
-# repo dirs whose top-level entries (one skill, mod or command) are added or removed only after asking
+# repo dir -> (home dir, name prefix). Their top-level entries (one skill, mod or command) are
+# added or removed only after asking, and only entries starting with the prefix are synced:
+# other skills are workplace specific, and ~/.local/bin also holds aws, claude, python etc.
 COLLECTIONS = {
-    "agents/skills": HOME_DIR / ".agents" / "skills",
-    "agents/claude/mods": HOME_DIR / ".claude" / "mods",
-    "git-commands": LOCAL_BIN,
+    "agents/skills": (HOME_DIR / ".agents" / "skills", "df-"),
+    "agents/claude/mods": (HOME_DIR / ".claude" / "mods", ""),
+    "git-commands": (LOCAL_BIN, "git-"),
 }
 
 # junk that shows up in $HOME copies and never belongs in the repo
@@ -36,11 +39,6 @@ DRY_RUN = False
 
 def ignored(path):
     return path.name in IGNORED or path.name.endswith(("~", ".swp"))
-
-
-def in_collection(name, home_dir):
-    # ~/.local/bin also holds aws, claude, python etc.; only git-* commands come from this repo
-    return home_dir != LOCAL_BIN or name.startswith("git-")
 
 
 def write(src, dest):
@@ -84,9 +82,9 @@ def sync_tree(src, dest):
             sync_file(s, d)
 
 
-def sync_collection(repo_rel, home_dir):
+def sync_collection(repo_rel, home_dir, prefix):
     repo_dir = REPO_DIR / repo_rel
-    home_names = {p.name for p in home_dir.iterdir() if not ignored(p) and in_collection(p.name, home_dir)}
+    home_names = {p.name for p in home_dir.iterdir() if not ignored(p) and p.name.startswith(prefix)}
     repo_names = {p.name for p in repo_dir.iterdir() if not ignored(p)} if repo_dir.exists() else set()
     for name in sorted(home_names | repo_names):
         src, dest = home_dir / name, repo_dir / name
@@ -123,9 +121,9 @@ def sync_dotfiles():
             sync_tree(src, dest)
         else:
             sync_file(src, dest)
-    for repo_rel, home_dir in COLLECTIONS.items():
+    for repo_rel, (home_dir, prefix) in COLLECTIONS.items():
         if home_dir.exists():
-            sync_collection(repo_rel, home_dir)
+            sync_collection(repo_rel, home_dir, prefix)
         else:
             print(f"missing {home_dir}, skipping")
     scrub_gitconfig()
