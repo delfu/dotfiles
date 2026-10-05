@@ -23,11 +23,26 @@ Options:
 - `--dry-run` print what would happen without changing anything
 
 Dotfiles are **copied**, not symlinked, so editing `~/.zshrc` etc. doesn't touch
-this repo. Changes you want to keep have to be copied back here by hand. Any
+this repo. Changes you want to keep have to be copied back with `sync.py`. Any
 existing file that differs is replaced, with no backup.
 
 Machine- or work-specific shell settings go in `~/.zshrc.local`, which `zshrc`
 sources if it exists. `install.py` asks for `git user.email` per machine.
+
+## Sync back
+
+To pull edits made in `$HOME` back into the repo on a machine that's already set up:
+
+```
+python3 sync.py
+```
+
+It copies every file `install.py` installs back to its place in the repo, deletions
+included, and leaves the changes uncommitted so you can review them with `git diff`.
+It asks before adding or removing a whole skill or git command. It never copies
+`git user.email`. At the end it lists added lines that look work specific: lines
+that mention your git email's company domain, plus any `--flag REGEX` you pass.
+Use `--dry-run` to preview.
 
 ## Agent config
 
@@ -38,8 +53,8 @@ copies `agents/AGENTS.md` to `~/AGENTS.md` and `agents/skills` to
 - `~/.claude/CLAUDE.md` -> `~/AGENTS.md`
 - `~/.claude/skills` -> `~/.agents/skills`
 
-As with the other dotfiles, edits to a skill or `~/AGENTS.md` have to be copied
-back into `agents/` to keep them.
+As with the other dotfiles, edits to a skill or `~/AGENTS.md` have to be synced
+back into `agents/` with `sync.py` to keep them.
 
 The Terminal.app color scheme (`colors.terminal`) has to be imported by hand in
 Terminal > Settings > Profiles.
