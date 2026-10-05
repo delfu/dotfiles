@@ -2,8 +2,7 @@
 """Set up a new machine from this dotfiles repo.
 
 Dotfiles are *copied* into $HOME (not symlinked), so edits made in $HOME
-don't show up as changes in this repo. Existing files that differ are backed
-up to <name>.bak before being replaced.
+don't show up as changes in this repo. Existing files that differ are replaced.
 """
 import argparse
 import filecmp
@@ -27,6 +26,15 @@ DOTFILES = {
     "gitconfig": ".gitconfig",
     "gitignore_global": ".gitignore_global",
     "KeyBindings/DefaultKeyBinding.dict": "Library/KeyBindings/DefaultKeyBinding.dict",
+    # agent config: one source of truth, which Claude reads through the symlinks below
+    "agents/AGENTS.md": "AGENTS.md",
+    "agents/skills": ".agents/skills",
+}
+
+# symlink in $HOME -> target in $HOME
+SYMLINKS = {
+    ".claude/CLAUDE.md": "AGENTS.md",
+    ".claude/skills": ".agents/skills",
 }
 
 DRY_RUN = False
@@ -104,24 +112,23 @@ def same(src, dest):
     return dest.is_file() and filecmp.cmp(src, dest, shallow=False)
 
 
+# remove whatever is at dest so it can be replaced
+def clear(dest):
+    if dest.is_symlink() or dest.is_file():
+        print(f"removing {dest}")
+        if not DRY_RUN:
+            dest.unlink()
+    elif dest.exists():
+        print(f"removing {dest}")
+        if not DRY_RUN:
+            shutil.rmtree(dest)
+
+
 def copy(src, dest):
     if same(src, dest):
         print(f"up to date: {dest}")
         return
-    if dest.is_symlink():
-        # e.g. a leftover symlink from the old install into this repo
-        print(f"removing symlink {dest} -> {os.readlink(dest)}")
-        if not DRY_RUN:
-            dest.unlink()
-    elif dest.exists():
-        backup = dest.with_name(dest.name + ".bak")
-        print(f"backing up {dest} -> {backup}")
-        if not DRY_RUN:
-            if backup.is_dir() and not backup.is_symlink():
-                shutil.rmtree(backup)
-            elif backup.exists() or backup.is_symlink():
-                backup.unlink()
-            dest.rename(backup)
+    clear(dest)
     print(f"copying {src.relative_to(REPO_DIR)} -> {dest}")
     if DRY_RUN:
         return
@@ -135,6 +142,23 @@ def copy(src, dest):
 def copy_dotfiles():
     for src, dest in DOTFILES.items():
         copy(REPO_DIR / src, HOME_DIR / dest)
+
+
+def link(dest, target):
+    if dest.is_symlink() and dest.resolve() == target.resolve():
+        print(f"up to date: {dest} -> {target}")
+        return
+    clear(dest)
+    print(f"linking {dest} -> {target}")
+    if DRY_RUN:
+        return
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.symlink_to(target)
+
+
+def link_agent_config():
+    for dest, target in SYMLINKS.items():
+        link(HOME_DIR / dest, HOME_DIR / target)
 
 
 def git_email():
@@ -212,6 +236,7 @@ def main():
         configure_macos()
     install_git_commands()
     copy_dotfiles()
+    link_agent_config()
     configure_git_email()
     if not args.dotfiles_only:
         setup_ssh_key()
