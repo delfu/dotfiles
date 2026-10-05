@@ -39,7 +39,7 @@ python3 sync.py
 
 It copies every file `install.py` installs back to its place in the repo, deletions
 included, and leaves the changes uncommitted so you can review them with `git diff`.
-It asks before adding or removing a whole skill or git command. It never copies
+It asks before adding or removing a whole skill, Claude mod or git command. It never copies
 `git user.email`. At the end it lists added lines that look work specific: lines
 that mention your git email's company domain, plus any `--flag REGEX` you pass.
 Use `--dry-run` to preview.
@@ -52,6 +52,9 @@ copies `agents/AGENTS.md` to `~/AGENTS.md` and `agents/skills` to
 
 - `~/.claude/CLAUDE.md` -> `~/AGENTS.md`
 - `~/.claude/skills` -> `~/.agents/skills`
+
+Claude Code's own settings are copied too: `agents/claude/settings.json` to
+`~/.claude/settings.json` and `agents/claude/mods` to `~/.claude/mods`.
 
 As with the other dotfiles, edits to a skill or `~/AGENTS.md` have to be synced
 back into `agents/` with `sync.py` to keep them.
@@ -66,7 +69,7 @@ Double check the contents of the files before removing them so you don't lose cu
 ```
 rm -rf ~/.vim ~/.oh-my-zsh
 rm ~/.vimrc ~/.zshrc ~/.gitconfig ~/.gitignore_global
-rm -rf ~/AGENTS.md ~/.agents/skills ~/.claude/CLAUDE.md ~/.claude/skills
+rm -rf ~/AGENTS.md ~/.agents/skills ~/.claude/CLAUDE.md ~/.claude/skills ~/.claude/mods ~/.claude/settings.json
 rm ~/.local/bin/git-prom ~/.local/bin/git-undo ~/.local/bin/git-unstage
 chsh -s /bin/bash # change back to Bash if you want
 ```

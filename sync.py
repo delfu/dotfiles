@@ -5,7 +5,7 @@ Run it on a machine that was already set up, then review the result with
 `git diff` / `git status` before committing. Nothing is committed for you.
 
 Some edits made on a work machine are company specific, so:
-- adding or removing a whole skill or git command asks first
+- adding or removing a whole skill, Claude mod or git command asks first
 - the per-machine git user.email is never copied back
 - lines in the resulting diff that look work specific are listed at the end
 """
@@ -18,9 +18,10 @@ from pathlib import Path
 
 from install import DOTFILES, HOME_DIR, LOCAL_BIN, REPO_DIR, SYMLINKS, confirm
 
-# repo dirs whose top-level entries (one skill, one command) are added or removed only after asking
+# repo dirs whose top-level entries (one skill, mod or command) are added or removed only after asking
 COLLECTIONS = {
     "agents/skills": HOME_DIR / ".agents" / "skills",
+    "agents/claude/mods": HOME_DIR / ".claude" / "mods",
     "git-commands": LOCAL_BIN,
 }
 
@@ -86,7 +87,7 @@ def sync_tree(src, dest):
 def sync_collection(repo_rel, home_dir):
     repo_dir = REPO_DIR / repo_rel
     home_names = {p.name for p in home_dir.iterdir() if not ignored(p) and in_collection(p.name, home_dir)}
-    repo_names = {p.name for p in repo_dir.iterdir() if not ignored(p)}
+    repo_names = {p.name for p in repo_dir.iterdir() if not ignored(p)} if repo_dir.exists() else set()
     for name in sorted(home_names | repo_names):
         src, dest = home_dir / name, repo_dir / name
         if name not in repo_names:

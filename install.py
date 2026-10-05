@@ -29,6 +29,8 @@ DOTFILES = {
     # agent config: one source of truth, which Claude reads through the symlinks below
     "agents/AGENTS.md": "AGENTS.md",
     "agents/skills": ".agents/skills",
+    "agents/claude/settings.json": ".claude/settings.json",
+    "agents/claude/mods": ".claude/mods",
 }
 
 # symlink in $HOME -> target in $HOME
