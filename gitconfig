@@ -20,7 +20,6 @@
 	root = rev-parse --show-toplevel
 	ss= !git commit --message "WIP" && git stash -u && git reset --soft HEAD^
 	rename = !export old_branch=":$(git rev-parse --abbrev-ref HEAD)" && git branch -m $1 && git push -f origin $old_branch
-	close = !export tobedeleted=`git branch --show-current` && git sync master && git checkout master && git branch -D $tobedeleted && git prune && git fetch --prune
 	pr = "!f() { if ! command -v gh >/dev/null; then echo 'git pr: gh is not installed (brew install gh)' >&2; return 1; fi; gh pr create --web; }; f"
 	dc = diff --cached
 [color]

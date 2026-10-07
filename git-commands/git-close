@@ -1,0 +1,28 @@
+#!/bin/bash
+# Pull the default branch and rebase the current feature branch onto it.
+# Uncommitted changes are stashed first and restored afterwards.
+
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+# default branch from origin/HEAD, falling back to master
+main=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)
+main=${main#origin/}
+main=${main:-master}
+
+stashed=false
+if [[ -n $(git status --porcelain) ]]; then
+	git stash push -u -m "git-prom autostash" && stashed=true
+fi
+
+branch=$(git branch --show-current)
+if [ "$branch" != "$main" ]; then
+	git checkout "$main"
+	git pull
+	git branch -D "$branch" && git prune && git fetch --prune
+else
+	echo "You're trying to delete the $main branch"
+	exit 0
+fi
+result=$?
+
+exit $result
