@@ -45,6 +45,18 @@ specific. It asks before adding or removing a whole skill, Claude mod or git com
 that mention your git email's company domain, plus any `--flag REGEX` you pass.
 Use `--dry-run` to preview.
 
+## macOS settings
+
+- **Keyboard shortcuts** (System Settings > Keyboard > Keyboard Shortcuts) live in
+  `macos/symbolichotkeys.plist`. `install.py` loads them and `sync.py` exports them
+  back. A few only take effect after logging out.
+- **Vorssaint** settings live in `macos/vorssaint.plist`, a file exported from
+  Vorssaint's Settings > Advanced. On a fresh install, `install.py` loads it before
+  Vorssaint first runs. If Vorssaint is already set up, import the file from the app.
+  `sync.py` can't export it, so re-export from the app when you change something.
+- **Alfred** is installed from the Brewfile. To carry its settings across, point it at a
+  synced folder in Alfred > Advanced > Syncing.
+
 ## Agent config
 
 `agents/` is the single source of truth for coding-agent config. `install.py`

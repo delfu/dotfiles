@@ -17,7 +17,18 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from install import DOTFILES, HOME_DIR, LOCAL_BIN, REPO_DIR, SYMLINKS, confirm
+from install import (
+    DOTFILES,
+    HOME_DIR,
+    HOTKEYS_DOMAIN,
+    HOTKEYS_FILE,
+    LOCAL_BIN,
+    REPO_DIR,
+    SYMLINKS,
+    VORSSAINT_FILE,
+    git_email,
+    util_confirm,
+)
 
 # repo dir -> (home dir, name prefix). Their top-level entries (one skill, mod or command) are
 # added or removed only after asking, and only entries starting with the prefix are synced:
@@ -37,11 +48,11 @@ PERSONAL_DOMAINS = {"gmail", "icloud", "me", "hotmail", "outlook", "yahoo", "pro
 DRY_RUN = False
 
 
-def ignored(path):
+def dotfiles_ignored(path):
     return path.name in IGNORED or path.name.endswith(("~", ".swp"))
 
 
-def write(src, dest):
+def dotfiles_write(src, dest):
     print(f"copying {src} -> {dest.relative_to(REPO_DIR)}")
     if DRY_RUN:
         return
@@ -49,7 +60,7 @@ def write(src, dest):
     shutil.copy2(src, dest, follow_symlinks=False)
 
 
-def remove(dest):
+def dotfiles_remove(dest):
     print(f"removing {dest.relative_to(REPO_DIR)}")
     if DRY_RUN:
         return
@@ -59,57 +70,57 @@ def remove(dest):
         dest.unlink()
 
 
-def sync_file(src, dest):
+def dotfiles_sync_file(src, dest):
     if not dest.exists() or not filecmp.cmp(src, dest, shallow=False):
-        write(src, dest)
+        dotfiles_write(src, dest)
 
 
 # mirror src into dest: copy new and changed files, drop files that are gone from src
-def sync_tree(src, dest):
-    src_names = {p.name for p in src.iterdir() if not ignored(p)}
-    dest_names = {p.name for p in dest.iterdir() if not ignored(p)} if dest.exists() else set()
+def dotfiles_sync_tree(src, dest):
+    src_names = {p.name for p in src.iterdir() if not dotfiles_ignored(p)}
+    dest_names = {p.name for p in dest.iterdir() if not dotfiles_ignored(p)} if dest.exists() else set()
     for name in sorted(src_names | dest_names):
         s, d = src / name, dest / name
         if name not in src_names:
-            remove(d)
+            dotfiles_remove(d)
         elif s.is_dir() and not s.is_symlink():
             if d.exists() and not d.is_dir():
-                remove(d)
-            sync_tree(s, d)
+                dotfiles_remove(d)
+            dotfiles_sync_tree(s, d)
         else:
             if d.is_dir() and not d.is_symlink():
-                remove(d)
-            sync_file(s, d)
+                dotfiles_remove(d)
+            dotfiles_sync_file(s, d)
 
 
-def sync_collection(repo_rel, home_dir, prefix):
+def dotfiles_sync_collection(repo_rel, home_dir, prefix):
     repo_dir = REPO_DIR / repo_rel
-    home_names = {p.name for p in home_dir.iterdir() if not ignored(p) and p.name.startswith(prefix)}
-    repo_names = {p.name for p in repo_dir.iterdir() if not ignored(p)} if repo_dir.exists() else set()
+    home_names = {p.name for p in home_dir.iterdir() if not dotfiles_ignored(p) and p.name.startswith(prefix)}
+    repo_names = {p.name for p in repo_dir.iterdir() if not dotfiles_ignored(p)} if repo_dir.exists() else set()
     for name in sorted(home_names | repo_names):
         src, dest = home_dir / name, repo_dir / name
         if name not in repo_names:
-            if not confirm(f"new in {home_dir}: {name}. add it to {repo_rel}/?"):
+            if not util_confirm(f"new in {home_dir}: {name}. add it to {repo_rel}/?"):
                 continue
         elif name not in home_names:
-            if confirm(f"{name} is gone from {home_dir}. remove it from {repo_rel}/?"):
-                remove(dest)
+            if util_confirm(f"{name} is gone from {home_dir}. remove it from {repo_rel}/?"):
+                dotfiles_remove(dest)
             continue
         if src.is_dir():
-            sync_tree(src, dest)
+            dotfiles_sync_tree(src, dest)
         else:
-            sync_file(src, dest)
+            dotfiles_sync_file(src, dest)
 
 
 # install.py asks for user.email per machine, so keep it out of the repo's gitconfig
-def scrub_gitconfig():
+def git_scrub_config():
     gitconfig = REPO_DIR / "gitconfig"
     if DRY_RUN or not gitconfig.exists():
         return
     subprocess.run(["git", "config", "--file", str(gitconfig), "--unset-all", "user.email"], capture_output=True)
 
 
-def sync_dotfiles():
+def dotfiles_sync():
     collections = {REPO_DIR / rel for rel in COLLECTIONS}
     for repo_rel, home_rel in DOTFILES.items():
         src, dest = HOME_DIR / home_rel, REPO_DIR / repo_rel
@@ -118,20 +129,29 @@ def sync_dotfiles():
         if not src.exists():
             print(f"missing {src}, skipping")
         elif src.is_dir():
-            sync_tree(src, dest)
+            dotfiles_sync_tree(src, dest)
         else:
-            sync_file(src, dest)
+            dotfiles_sync_file(src, dest)
     for repo_rel, (home_dir, prefix) in COLLECTIONS.items():
         if home_dir.exists():
-            sync_collection(repo_rel, home_dir, prefix)
+            dotfiles_sync_collection(repo_rel, home_dir, prefix)
         else:
             print(f"missing {home_dir}, skipping")
-    scrub_gitconfig()
+    git_scrub_config()
+
+
+# exported as XML so changes show up in git diff
+def mac_sync_hotkeys():
+    print(f"exporting {HOTKEYS_DOMAIN} -> {HOTKEYS_FILE.relative_to(REPO_DIR)}")
+    if DRY_RUN:
+        return
+    exported = subprocess.run(["defaults", "export", HOTKEYS_DOMAIN, "-"], capture_output=True, check=True).stdout
+    subprocess.run(["plutil", "-convert", "xml1", "-o", str(HOTKEYS_FILE), "-"], input=exported, check=True)
 
 
 # Claude reads agent config through these symlinks; a tool that replaced one with a
 # real file has edits that never reached ~/AGENTS.md or ~/.agents/skills
-def check_symlinks():
+def agents_check_symlinks():
     for link, target in SYMLINKS.items():
         path = HOME_DIR / link
         if path.exists() and not path.is_symlink():
@@ -140,8 +160,7 @@ def check_symlinks():
 
 def work_patterns(extra):
     patterns = list(extra)
-    result = subprocess.run(["git", "config", "--global", "user.email"], capture_output=True, text=True)
-    email = result.stdout.strip()
+    email = git_email()
     if "@" in email:
         domain = email.split("@", 1)[1]
         company = domain.split(".")[0]
@@ -150,23 +169,23 @@ def work_patterns(extra):
     return patterns
 
 
-def git(*args):
+def git_run(*args):
     return subprocess.run(["git", "-C", str(REPO_DIR), *args], capture_output=True, text=True).stdout
 
 
 # list added lines (and new untracked files) that match a work pattern, so they get a second look
-def flag_work_specific(patterns):
+def work_flag_lines(patterns):
     if not patterns:
         return
     regex = re.compile("|".join(patterns), re.IGNORECASE)
     hits = []
     current = None
-    for line in git("diff", "--no-color", "-U0").splitlines():
+    for line in git_run("diff", "--no-color", "-U0").splitlines():
         if line.startswith("+++ "):
             current = line[6:] if line.startswith("+++ b/") else None
         elif line.startswith("+") and current and regex.search(line):
             hits.append(f"{current}: {line[1:].strip()}")
-    for rel in git("ls-files", "--others", "--exclude-standard").splitlines():
+    for rel in git_run("ls-files", "--others", "--exclude-standard").splitlines():
         try:
             text = (REPO_DIR / rel).read_text()
         except (UnicodeDecodeError, OSError):
@@ -193,15 +212,17 @@ def main():
     args = parser.parse_args()
     DRY_RUN = args.dry_run
 
-    if git("status", "--porcelain", "--untracked-files=no") and not args.force and not DRY_RUN:
+    if git_run("status", "--porcelain", "--untracked-files=no") and not args.force and not DRY_RUN:
         raise SystemExit("repo has uncommitted changes; commit or stash them first, or pass --force")
 
-    check_symlinks()
-    sync_dotfiles()
+    agents_check_symlinks()
+    dotfiles_sync()
+    mac_sync_hotkeys()
     if not DRY_RUN:
-        flag_work_specific(work_patterns(args.flag))
+        work_flag_lines(work_patterns(args.flag))
         print("\nDone. Nothing was committed. Review with `git status` and `git diff`, and move")
         print("work-specific shell settings to ~/.zshrc.local instead of committing them.")
+        print(f"Vorssaint settings aren't synced: export them from its Settings > Advanced to {VORSSAINT_FILE}.")
 
 
 if __name__ == "__main__":

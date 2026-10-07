@@ -7,6 +7,7 @@ don't show up as changes in this repo. Existing files that differ are replaced.
 import argparse
 import filecmp
 import os
+import plistlib
 import shlex
 import shutil
 import subprocess
@@ -17,6 +18,13 @@ HOME_DIR = Path.home()
 LOCAL_BIN = HOME_DIR / ".local" / "bin"
 OH_MY_ZSH_DIR = HOME_DIR / ".oh-my-zsh"
 NVM_VERSION = "v0.40.3"
+
+# keyboard shortcuts from System Settings > Keyboard > Keyboard Shortcuts
+HOTKEYS_DOMAIN = "com.apple.symbolichotkeys"
+HOTKEYS_FILE = REPO_DIR / "macos" / "symbolichotkeys.plist"
+# a file saved by Vorssaint's own Settings > Advanced > Export
+VORSSAINT_DOMAIN = "com.vorssaint.utils"
+VORSSAINT_FILE = REPO_DIR / "macos" / "vorssaint.plist"
 
 # repo path -> destination in $HOME
 DOTFILES = {
@@ -46,24 +54,24 @@ SYMLINKS = {
 DRY_RUN = False
 
 
-def run(cmd, check=True):
+def util_run(cmd, check=True):
     print(f"[run] {cmd}")
     if not DRY_RUN:
         subprocess.run(cmd, shell=True, check=check)
 
 
-def confirm(question):
+def util_confirm(question):
     response = input(f"{question} [ynq] ").strip().lower()
     if response == "q":
         raise SystemExit(0)
     return response == "y"
 
 
-def install_oh_my_zsh():
+def zsh_install_oh_my_zsh():
     if OH_MY_ZSH_DIR.exists():
         print("found ~/.oh-my-zsh")
-    elif confirm("install oh-my-zsh?"):
-        run(f"git clone https://github.com/ohmyzsh/ohmyzsh.git {OH_MY_ZSH_DIR}")
+    elif util_confirm("install oh-my-zsh?"):
+        util_run(f"git clone https://github.com/ohmyzsh/ohmyzsh.git {OH_MY_ZSH_DIR}")
     else:
         print("skipping oh-my-zsh, you will need to change ~/.zshrc")
 
@@ -74,38 +82,40 @@ def brew_path():
     )
 
 
-def install_homebrew():
+def brew_install():
     if brew_path():
         print("found Homebrew")
         return
-    run('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"')
+    util_run('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"')
 
 
-def install_bins():
+def brew_bundle():
     brew = brew_path()
     if brew:
-        run(f"{brew} bundle --file={REPO_DIR / 'Brewfile'}")
+        util_run(f"{brew} bundle --file={REPO_DIR / 'Brewfile'}")
     else:
         print("brew not found, skipping Brewfile packages")
 
+
+def node_install_nvm():
     if (HOME_DIR / ".nvm").exists():
         print("found ~/.nvm")
     else:
         # PROFILE=/dev/null stops the nvm installer from appending to ~/.zshrc; our zshrc loads nvm itself
-        run(f"curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/{NVM_VERSION}/install.sh | PROFILE=/dev/null bash")
+        util_run(f"curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/{NVM_VERSION}/install.sh | PROFILE=/dev/null bash")
 
 
 # install custom git commands to ~/.local/bin, which zshrc puts on PATH
-def install_git_commands():
+def git_install_commands():
     print("Installing custom git commands")
     if not DRY_RUN:
         LOCAL_BIN.mkdir(parents=True, exist_ok=True)
     for command in sorted((REPO_DIR / "git-commands").iterdir()):
         if command.is_file():
-            copy(command, LOCAL_BIN / command.name)
+            dotfiles_copy(command, LOCAL_BIN / command.name)
 
 
-def same(src, dest):
+def dotfiles_same(src, dest):
     if dest.is_symlink() or not dest.exists():
         return False
     if src.is_dir():
@@ -113,13 +123,13 @@ def same(src, dest):
             return False
         cmp = filecmp.dircmp(src, dest)
         return not (cmp.left_only or cmp.right_only or cmp.diff_files or cmp.funny_files) and all(
-            same(src / d, dest / d) for d in cmp.common_dirs
+            dotfiles_same(src / d, dest / d) for d in cmp.common_dirs
         )
     return dest.is_file() and filecmp.cmp(src, dest, shallow=False)
 
 
 # remove whatever is at dest so it can be replaced
-def clear(dest):
+def dotfiles_clear(dest):
     if dest.is_symlink() or dest.is_file():
         print(f"removing {dest}")
         if not DRY_RUN:
@@ -130,11 +140,11 @@ def clear(dest):
             shutil.rmtree(dest)
 
 
-def copy(src, dest):
-    if same(src, dest):
+def dotfiles_copy(src, dest):
+    if dotfiles_same(src, dest):
         print(f"up to date: {dest}")
         return
-    clear(dest)
+    dotfiles_clear(dest)
     print(f"copying {src.relative_to(REPO_DIR)} -> {dest}")
     if DRY_RUN:
         return
@@ -145,20 +155,20 @@ def copy(src, dest):
         shutil.copy2(src, dest)
 
 
-def copy_dotfiles():
+def dotfiles_copy_all():
     for src, dest in DOTFILES.items():
         if src in MERGED_DIRS:
             for entry in sorted((REPO_DIR / src).iterdir()):
-                copy(entry, HOME_DIR / dest / entry.name)
+                dotfiles_copy(entry, HOME_DIR / dest / entry.name)
         else:
-            copy(REPO_DIR / src, HOME_DIR / dest)
+            dotfiles_copy(REPO_DIR / src, HOME_DIR / dest)
 
 
-def link(dest, target):
+def dotfiles_link(dest, target):
     if dest.is_symlink() and dest.resolve() == target.resolve():
         print(f"up to date: {dest} -> {target}")
         return
-    clear(dest)
+    dotfiles_clear(dest)
     print(f"linking {dest} -> {target}")
     if DRY_RUN:
         return
@@ -166,9 +176,9 @@ def link(dest, target):
     dest.symlink_to(target)
 
 
-def link_agent_config():
+def agents_link_config():
     for dest, target in SYMLINKS.items():
-        link(HOME_DIR / dest, HOME_DIR / target)
+        dotfiles_link(HOME_DIR / dest, HOME_DIR / target)
 
 
 def git_email():
@@ -176,25 +186,25 @@ def git_email():
     return result.stdout.strip()
 
 
-def configure_git_email():
+def git_configure_email():
     if git_email():
         print(f"git user.email is {git_email()}")
         return
     email = input("git user.email for this machine (blank to skip): ").strip()
     if email:
-        run(f"git config --global user.email {shlex.quote(email)}")
+        util_run(f"git config --global user.email {shlex.quote(email)}")
 
 
-def setup_ssh_key():
+def ssh_setup_key():
     key = HOME_DIR / ".ssh" / "id_ed25519"
     if key.exists():
         print(f"found {key}")
         return
-    if not confirm("generate an ed25519 SSH key?"):
+    if not util_confirm("generate an ed25519 SSH key?"):
         return
     if not DRY_RUN:
         key.parent.mkdir(mode=0o700, exist_ok=True)
-    run(f"ssh-keygen -t ed25519 -C {shlex.quote(git_email() or os.environ.get('USER', ''))} -f {key}")
+    util_run(f"ssh-keygen -t ed25519 -C {shlex.quote(git_email() or os.environ.get('USER', ''))} -f {key}")
     # store the passphrase in the macOS keychain and load the key automatically
     ssh_config = HOME_DIR / ".ssh" / "config"
     if not ssh_config.exists() or "UseKeychain" not in ssh_config.read_text():
@@ -202,7 +212,7 @@ def setup_ssh_key():
         if not DRY_RUN:
             with ssh_config.open("a") as f:
                 f.write(f"\nHost *\n  AddKeysToAgent yes\n  UseKeychain yes\n  IdentityFile {key}\n")
-    run(f"ssh-add --apple-use-keychain {key}", check=False)
+    util_run(f"ssh-add --apple-use-keychain {key}", check=False)
 
 
 def gh_login():
@@ -214,21 +224,47 @@ def gh_login():
         return
     if subprocess.run([gh, "auth", "status"], capture_output=True).returncode == 0:
         print("already logged in to GitHub")
-    elif confirm("log in to GitHub with gh? (it can also upload your SSH key)"):
-        run(f"{gh} auth login", check=False)
+    elif util_confirm("log in to GitHub with gh? (it can also upload your SSH key)"):
+        util_run(f"{gh} auth login", check=False)
 
 
-def set_default_shell():
+def zsh_set_default_shell():
     zsh = shutil.which("zsh") or "/bin/zsh"
     if os.environ.get("SHELL", "").endswith("/zsh"):
         print("default shell is already zsh")
-    elif confirm("make zsh your default shell?"):
-        run(f"chsh -s {zsh}")
+    elif util_confirm("make zsh your default shell?"):
+        util_run(f"chsh -s {zsh}")
 
 
-def configure_macos():
-    # disable mouse acceleration (takes effect after logging out and back in)
-    run("defaults write .GlobalPreferences com.apple.mouse.scaling -1")
+# takes effect after logging out and back in
+def mac_disable_mouse_acceleration():
+    util_run("defaults write .GlobalPreferences com.apple.mouse.scaling -1")
+
+
+def mac_restore_hotkeys():
+    util_run(f"defaults import {HOTKEYS_DOMAIN} {shlex.quote(str(HOTKEYS_FILE))}")
+    # applies them without logging out; a few only switch over after a logout
+    util_run("/System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u", check=False)
+
+
+def mac_has_defaults(domain):
+    return subprocess.run(["defaults", "read", domain], capture_output=True).returncode == 0
+
+
+# Vorssaint only imports backups through its UI, so on a fresh install write the backup's
+# settings straight into its defaults before its first launch, which is what its import does
+def vorssaint_restore():
+    if not VORSSAINT_FILE.exists():
+        print(f"no {VORSSAINT_FILE.relative_to(REPO_DIR)}, skipping Vorssaint settings")
+        return
+    if mac_has_defaults(VORSSAINT_DOMAIN):
+        print(f"Vorssaint is already set up; import {VORSSAINT_FILE} from its Settings > Advanced if you want it")
+        return
+    with VORSSAINT_FILE.open("rb") as f:
+        settings = plistlib.load(f)["settings"]
+    print(f"loading Vorssaint settings from {VORSSAINT_FILE.relative_to(REPO_DIR)}")
+    if not DRY_RUN:
+        subprocess.run(["defaults", "import", VORSSAINT_DOMAIN, "-"], input=plistlib.dumps(settings), check=True)
 
 
 def main():
@@ -240,18 +276,21 @@ def main():
     DRY_RUN = args.dry_run or os.environ.get("DEBUG") == "1"
 
     if not args.dotfiles_only:
-        install_oh_my_zsh()
-        install_homebrew()
-        install_bins()
-        configure_macos()
-    install_git_commands()
-    copy_dotfiles()
-    link_agent_config()
-    configure_git_email()
+        zsh_install_oh_my_zsh()
+        brew_install()
+        brew_bundle()
+        node_install_nvm()
+        mac_disable_mouse_acceleration()
+        mac_restore_hotkeys()
+        vorssaint_restore()
+    git_install_commands()
+    dotfiles_copy_all()
+    agents_link_config()
+    git_configure_email()
     if not args.dotfiles_only:
-        setup_ssh_key()
+        ssh_setup_key()
         gh_login()
-        set_default_shell()
+        zsh_set_default_shell()
     print("\nDone. Import colors.terminal manually in Terminal > Settings > Profiles if you want the color scheme.")
 
 

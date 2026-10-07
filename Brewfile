@@ -17,3 +17,8 @@ brew "pre-commit"
 brew "uv"
 # Manage stacked changes and submit them for review on GitHub
 brew "withgraphite/tap/graphite", trusted: true
+
+# Application launcher (Spotlight's cmd-space is turned off in macos/symbolichotkeys.plist)
+cask "alfred"
+# Menu bar toolkit; install.py loads macos/vorssaint.plist into it on first install
+cask "vorssaint"
