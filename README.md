@@ -15,7 +15,12 @@ the custom git commands into `~/.local/bin`, and copies the dotfiles into
 `$HOME`. It then offers to set up an ed25519 SSH key, log in to GitHub with
 `gh` (which can upload the key), and make zsh your default shell.
 
-To add a package, add it to `Brewfile` and run `brew bundle`.
+To add a package, add it to `Brewfile` and rerun `python3 install.py`.
+The installer shows a checkbox list: use Up/Down to move, Space to toggle
+packages, Enter to continue, and q or Escape to quit. It uses Python's built-in
+`curses` module, with no extra Python dependencies. Neovim is selected by default; toggle
+Vim and Neovim to choose either, both, or neither. Unchecked packages are left
+alone, not uninstalled. Running `brew bundle` directly installs all entries.
 
 The installer skips Homebrew's Vorssaint installation when
 `/Applications/Vorssaint.app` already exists, leaving that app in place.
@@ -25,13 +30,23 @@ Options:
 
 - `--dotfiles-only` just copy dotfiles and git commands, skip installs and account setup
 - `--dry-run` print what would happen without changing anything
+- `--editor vim` or `--editor neovim` skip the package menu and select that editor;
+  other packages remain selected. Dry runs and noninteractive runs also skip the
+  menu and default to Neovim.
+
+Only selected editors' configurations are copied. Neovim's `init.lua` and
+`lazy-lock.json` live in `nvim/` and install into `~/.config/nvim/`; `sync.py`
+copies changes back. Plugins download through lazy.nvim on first launch, which
+needs network access. `universal-ctags` supports Tagbar. Launch Neovim with `nvim`
+or Vim with `vim`.
 
 Dotfiles are **copied**, not symlinked, so editing `~/.zshrc` etc. doesn't touch
 this repo. Changes you want to keep have to be copied back with `sync.py`. Any
 existing file that differs is replaced, with no backup.
 
 Machine- or work-specific shell settings go in `~/.zshrc.local`, which `zshrc`
-sources if it exists. `install.py` asks for `git user.email` per machine.
+sources if it exists. `install.py` asks for `git user.email` per machine;
+press Enter to keep the existing email, including when replacing `~/.gitconfig`.
 
 ## Sync back
 
@@ -72,6 +87,11 @@ copies `agents/AGENTS.md` to `~/AGENTS.md` and `agents/skills` to
 
 Claude Code's own settings are copied too: `agents/claude/settings.json` to
 `~/.claude/settings.json` and `agents/claude/mods` to `~/.claude/mods`.
+
+Each of these four agent entries has its own checkbox, selected by default.
+Uncheck an entry to leave its existing files and related symlink untouched.
+The same menu is available with `--dotfiles-only`. `--editor`, dry runs, and
+noninteractive runs skip the menu and keep all four agent entries selected.
 
 Skills and mods are installed one at a time, so ones that only exist on a machine
 (like workplace skills) are left in place.

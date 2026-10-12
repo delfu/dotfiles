@@ -5,12 +5,14 @@ Dotfiles are *copied* into $HOME (not symlinked), so edits made in $HOME
 don't show up as changes in this repo. Existing files that differ are replaced.
 """
 import argparse
+import curses
 import filecmp
 import os
 import plistlib
 import shlex
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 REPO_DIR = Path(__file__).resolve().parent
@@ -31,6 +33,8 @@ DOTFILES = {
     "zshrc": ".zshrc",
     "vimrc": ".vimrc",
     "vim": ".vim",
+    "nvim/init.lua": ".config/nvim/init.lua",
+    "nvim/lazy-lock.json": ".config/nvim/lazy-lock.json",
     "gitconfig": ".gitconfig",
     "gitignore_global": ".gitignore_global",
     "KeyBindings/DefaultKeyBinding.dict": "Library/KeyBindings/DefaultKeyBinding.dict",
@@ -89,16 +93,65 @@ def brew_install():
     util_run('/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"')
 
 
-def brew_bundle():
+def package_checklist(screen, packages, selected):
+    screen.keypad(True)
+    cursor = 0
+    while True:
+        screen.erase()
+        height, width = screen.getmaxyx()
+        rows = max(1, height - 3)
+        start = max(0, cursor - rows + 1)
+        lines = [("Choose packages and agent files: Up/Down move, Space toggles, Enter confirms, q quits", curses.A_BOLD)]
+        for i in range(start, min(len(packages), start + rows)):
+            name = packages[i][1]
+            lines.append((f"[{'x' if name in selected else ' '}] {name}",
+                          curses.A_REVERSE if i == cursor else curses.A_NORMAL))
+        for row, (label, style) in enumerate(lines[:max(0, height - 1)]):
+            if width > 1:
+                screen.addnstr(row, 0, label, width - 1, style)
+        screen.refresh()
+        key = screen.getch()
+        if key == curses.KEY_UP:
+            cursor = max(0, cursor - 1)
+        elif key == curses.KEY_DOWN:
+            cursor = min(len(packages) - 1, cursor + 1)
+        elif key == ord(" ") and packages:
+            selected.symmetric_difference_update({packages[cursor][1]})
+        elif key in (10, 13, curses.KEY_ENTER):
+            return
+        elif key in (ord("q"), 27):
+            raise SystemExit(0)
+
+
+def install_choices(editor=None):
+    packages = []
+    for line in (REPO_DIR / "Brewfile").read_text().splitlines():
+        words = shlex.split(line, comments=True)
+        if words and words[0] in {"brew", "cask"}:
+            packages.append((words[0], words[1].rstrip(",")))
+    packages.extend(("config", src) for src in DOTFILES if src.startswith("agents/"))
+    selected = {name for _, name in packages if name != "vim"}
+    if editor:
+        selected.difference_update({"vim", "neovim"})
+        selected.add("neovim" if editor == "neovim" else "vim")
+    elif sys.stdin.isatty() and sys.stdout.isatty() and not DRY_RUN:
+        curses.wrapper(package_checklist, packages, selected)
+    return packages, selected
+
+
+def brew_bundle(packages, selected):
     brew = brew_path()
     if brew:
         cmd = f"{shlex.quote(brew)} bundle --file={shlex.quote(str(REPO_DIR / 'Brewfile'))}"
-        if Path("/Applications/Vorssaint.app").is_dir():
-            print("found Vorssaint, skipping its Homebrew installation")
-            skips = os.environ.get("HOMEBREW_BUNDLE_CASK_SKIP", "").split()
-            if "vorssaint" not in skips:
-                skips.append("vorssaint")
-            cmd = f"HOMEBREW_BUNDLE_CASK_SKIP={shlex.quote(' '.join(skips))} {cmd}"
+        for kind, variable in (("brew", "HOMEBREW_BUNDLE_BREW_SKIP"), ("cask", "HOMEBREW_BUNDLE_CASK_SKIP")):
+            skips = os.environ.get(variable, "").split()
+            skips.extend(name for cls, name in packages if cls == kind and name not in selected and name not in skips)
+            if kind == "cask" and Path("/Applications/Vorssaint.app").is_dir():
+                print("found Vorssaint, skipping its Homebrew installation")
+                if "vorssaint" not in skips:
+                    skips.append("vorssaint")
+            if skips:
+                cmd = f"{variable}={shlex.quote(' '.join(skips))} {cmd}"
         util_run(cmd)
     else:
         print("brew not found, skipping Brewfile packages")
@@ -162,8 +215,15 @@ def dotfiles_copy(src, dest):
         shutil.copy2(src, dest)
 
 
-def dotfiles_copy_all():
+def dotfiles_copy_all(selected=None):
     for src, dest in DOTFILES.items():
+        if selected is not None:
+            if src.startswith("agents/") and src not in selected:
+                continue
+            if src in {"vim", "vimrc"} and "vim" not in selected:
+                continue
+            if src.startswith("nvim/") and "neovim" not in selected:
+                continue
         if src in MERGED_DIRS:
             for entry in sorted((REPO_DIR / src).iterdir()):
                 dotfiles_copy(entry, HOME_DIR / dest / entry.name)
@@ -183,8 +243,11 @@ def dotfiles_link(dest, target):
     dest.symlink_to(target)
 
 
-def agents_link_config():
+def agents_link_config(selected=None):
     for dest, target in SYMLINKS.items():
+        src = next(src for src, home in DOTFILES.items() if home == target)
+        if selected is not None and src not in selected:
+            continue
         dotfiles_link(HOME_DIR / dest, HOME_DIR / target)
 
 
@@ -193,12 +256,10 @@ def git_email():
     return result.stdout.strip()
 
 
-def git_configure_email():
-    if git_email():
-        print(f"git user.email is {git_email()}")
-        return
-    email = input("git user.email for this machine (blank to skip): ").strip()
-    if email:
+def git_configure_email(existing_email):
+    default = f"blank to keep {existing_email}" if existing_email else "blank to skip"
+    email = input(f"git user.email for this machine ({default}): ").strip() or existing_email
+    if email and email != git_email():
         util_run(f"git config --global user.email {shlex.quote(email)}")
 
 
@@ -279,21 +340,25 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dry-run", action="store_true", help="print what would happen without changing anything")
     parser.add_argument("--dotfiles-only", action="store_true", help="only copy dotfiles and git commands, skip installs")
+    parser.add_argument("--editor", choices=("vim", "neovim"), help="choose an editor without the package menu")
     args = parser.parse_args()
     DRY_RUN = args.dry_run or os.environ.get("DEBUG") == "1"
+    packages, selected = install_choices(args.editor)
 
     if not args.dotfiles_only:
         zsh_install_oh_my_zsh()
         brew_install()
-        brew_bundle()
+        brew_bundle(packages, selected)
         node_install_nvm()
         mac_disable_mouse_acceleration()
         mac_restore_hotkeys()
-        vorssaint_restore()
+        if "vorssaint" in selected:
+            vorssaint_restore()
     git_install_commands()
-    dotfiles_copy_all()
-    agents_link_config()
-    git_configure_email()
+    existing_email = git_email()
+    dotfiles_copy_all(selected)
+    agents_link_config(selected)
+    git_configure_email(existing_email)
     if not args.dotfiles_only:
         ssh_setup_key()
         gh_login()

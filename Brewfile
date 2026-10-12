@@ -3,6 +3,12 @@
 
 tap "withgraphite/tap"
 
+# Editors (install.py asks which to install)
+brew "vim"
+brew "neovim"
+# Tagbar's tag generator
+brew "universal-ctags"
+
 # Search tool like grep, but optimized for programmers
 brew "ack"
 # Clone of cat(1) with syntax highlighting and Git integration
