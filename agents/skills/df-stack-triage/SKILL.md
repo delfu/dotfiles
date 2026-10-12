@@ -1,6 +1,6 @@
 ---
-name: df-comments
-description: Use when Delong invokes /df-comments after opening a PR or Graphite stack — summarizes every review comment (human, bot or LLM) in one triage table with severity and a recommendation, waits for his decisions, then hands off to review-pr-comments to reply and fix.
+name: df-stack-triage
+description: Use when Delong invokes /df-stack-triage after opening a PR or Graphite stack — summarizes every review comment (human, bot or LLM) in one triage table with severity and a recommendation, waits for his decisions, then hands off to review-pr-comments to reply and fix.
 user-invocable: true
 argument-hint: [PR number | PR URL | branch]
 ---
@@ -16,10 +16,12 @@ This skill changes only three things: **which PRs** to cover, **the table**, and
 Pick the target in this order:
 
 1. The argument: a PR number, PR URL or branch name.
-2. The current branch. If HEAD is detached (normal after `/df-create-pr`), use `git branch --format='%(refname:short)' --points-at HEAD`.
+2. The current branch. If HEAD is detached (normal after `/df-stack-submit` in extend mode), use `git branch --format='%(refname:short)' --points-at HEAD`.
 3. Otherwise, list open PRs with `gh pr list --author @me --state open --json number,title,headRefName,url`.
 
 If the target is in a Graphite stack, cover the **whole stack**. Walk it with `gt info --branch <b> --no-interactive`, reading `Parent:` until you reach `staging`. Then add children from `gt log short --stack --no-interactive`.
+
+If a PR in the stack has merged, follow `/df-stack-sync` before triaging, so fixes land on a stack that's already on `staging`.
 
 **If it's ambiguous, ask before reading anything.** For example: no argument and nothing checked out, several open stacks, or an argument that matches more than one PR. Use AskUserQuestion with each candidate's PR number and title as options.
 
@@ -57,8 +59,9 @@ Fetch and verify each PR exactly as `review-pr-comments` says. Then show one tab
 Continue with `review-pr-comments`, using Delong's decisions as the verdicts:
 
 - Re-fetch first. Add any new comments as new rows and ask about them.
-- Make each fix on the branch whose PR the comment is on, not on the top of the stack: in the worktree holding the branch, `gt checkout <branch>`, make the change, then `gt modify`. If Graphite reports a branch "needs restack" because it is checked out in another worktree, run `gt restack` in that worktree.
+- Make each fix on the branch whose PR the comment is on, not on the top of the stack: `gt checkout <branch>`, make the change, then `gt modify`, which restacks everything above it. Work in the stack's own worktree (`gt log` shows where its branches are checked out). Graphite skips branches checked out in another worktree. If one is, name it and say it needs `gt restack` there. A `/df-stack-extend` branch on top restacks itself when it's submitted.
+- Never fix with `git rebase`, `git commit --amend` or `git reset` on stack branches. Graphite's metadata goes stale, and its next restack replays the wrong commits.
 - If a fix changes what the PR description says, fetch the live body (`gh pr view <n> --json body -q .body`), change only the affected lines, and keep everything else (screenshots, videos, Delong's edits) as is. Never regenerate the description. Show the change and wait for Delong's yes before `gh pr edit`.
-- **Commit fixes locally, then stop. Don't push.** List the fix commits for each PR and wait until Delong has checked them or tells you to push. Then push with `gt submit --stack --no-edit --no-interactive`.
+- **Commit fixes locally, then stop. Don't push.** List the fix commits for each PR and wait until Delong has checked them or tells you to push. Then push with `gt submit --stack --update-only --no-edit --no-interactive`. `--update-only` pushes only branches that already have a PR, so unfinished work stacked on top isn't published.
 - Fixed replies name the commit SHA, so they wait until that fix is pushed. Skipped and Reply-only replies can go earlier.
 - Post only after Delong's yes, as `review-pr-comments` requires.

@@ -1,19 +1,19 @@
 ---
 name: df-new
-description: Use when Delong invokes /df-new to start a fresh piece of work — opens a new worktree off latest staging, plans, and builds with agents as plain commits until /df-create-pr.
+description: Use when Delong invokes /df-new to start a fresh piece of work — opens a new worktree off latest staging, plans, and builds with agents as plain commits until /df-stack-submit.
 user-invocable: true
 argument-hint: <what to build>
 ---
 
 # New work session (Delong)
 
-Start one focused idea in its own worktree, cut from the latest `origin/staging`. Build it with plain commits on one branch. Graphite is not involved until `/df-create-pr`.
+Start one focused idea in its own worktree, cut from the latest `origin/staging`, on a branch Graphite tracks from the start. Build it with plain commits on that branch. This worktree becomes the stack's home: review fixes for its PRs happen here later.
 
-Related: `/df-next` stacks new work on an existing stack; `/df-create-pr` publishes.
+Related: `/df-stack-extend` stacks new work on an existing stack; `/df-stack-submit` publishes.
 
 ## When NOT to Use
 
-- To build on top of an existing stack → `/df-next`.
+- To build on top of an existing stack → `/df-stack-extend`.
 - To fix review comments on an open PR → work in that PR's worktree (`review-pr-comments`).
 
 ## Workflow
@@ -38,10 +38,10 @@ Pick a short kebab-case `<slug>` from the task (ask only if `$ARGUMENTS` is empt
 
   Then call **EnterWorktree** with `path: "$WT"` so the session moves into it.
 
-Record where the branch came from. `/df-create-pr` reads this:
+Track the branch in Graphite on `staging`:
 
 ```bash
-git config "branch.delong/<slug>.delong-parent" staging
+gt track --parent staging --no-interactive
 ```
 
 Run `./.worktreesetup` in the background from the worktree root. The SessionStart hook does not fire for a worktree created mid-session. If the task is clearly one project, scope the setup, for example `WORKTREESETUP_PROJECTS=desktop`.
@@ -54,16 +54,17 @@ Follow the repo's AGENTS.md rule. For anything non-trivial (new feature, multi-f
 
 - Dispatch subagents for independent pieces of the plan. Run them in parallel when they touch different files. Give each one the worktree path as its working directory. Don't use `isolation: "worktree"`: their changes must land in this worktree.
 - Commit as you go with plain `git commit` on `delong/<slug>`. Stage by explicit path. Never use `git add -A` or `-a`, and never stage `flow-server/vendor/vime`.
-- Keep commits shaped around ideas: one refactor, one feature step, and so on. `/df-create-pr` splits the stack along commit lines, so clean commits now mean an easy split later.
-- Don't run `gt create` or `gt submit`, and don't push. Publishing is `/df-create-pr`'s job.
+- Keep commits shaped around ideas: one refactor, one feature step, and so on. `/df-stack-submit` splits the stack along commit lines, so clean commits now mean an easy split later.
+- Don't run `gt submit`, and don't push. Publishing is `/df-stack-submit`'s job.
 - Run the touched project's typecheck, lint and tests before saying a step is done.
 
 ### 4. Hand back
 
-Report what was built, the commits, what was verified, and what wasn't. End with the next step: `/df-create-pr` when ready for review.
+Report what was built, the commits, what was verified, and what wasn't. End with the next step: `/df-stack-submit` when ready for review.
 
 ## Common Pitfalls
 
-- `git checkout staging` / `gt checkout staging` fail inside a worktree, because the main checkout owns `staging`. Always base on `origin/staging`.
+- Never check out `staging` or another stack's branch here. Base on `origin/staging`. Graphite updates local `staging` itself during `gt sync`.
+- Never build in the main checkout. A stack branch checked out there is skipped by every Graphite restack run from the stack's worktree.
 - Don't run `git stash` (it's shared across worktrees). Use a WIP commit instead.
-- One idea per session. If the work grows a second, unrelated idea, say so. Suggest finishing this one and starting the other with `/df-new` or `/df-next`.
+- One idea per session. If the work grows a second, unrelated idea, say so. Suggest finishing this one and starting the other with `/df-new` or `/df-stack-extend`.
