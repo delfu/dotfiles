@@ -1,28 +1,54 @@
 #!/bin/bash
-# Pull the default branch and rebase the current feature branch onto it.
-# Uncommitted changes are stashed first and restored afterwards.
+# Close a merged branch: delete it, switch to the default branch and pull it.
+# In a linked worktree, the worktree is removed too and the main checkout is
+# switched instead; its path is printed so the `git` wrapper in zshrc can cd
+# there, since a script can't change your shell's dir.
+# Uncommitted changes are stashed first, so nothing is lost.
 
-cd "$(git rev-parse --show-toplevel)" || exit 1
+# git's output goes to stderr; stdout only carries the path to cd to
+exec 3>&1 1>&2
+
+top=$(git rev-parse --show-toplevel) || exit 1
+cd "$top" || exit 1
+main=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+linked=false
+[ "$(git rev-parse --path-format=absolute --git-dir)" != "$(git rev-parse --path-format=absolute --git-common-dir)" ] && linked=true
 
 # default branch from origin/HEAD, falling back to master
-main=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)
-main=${main#origin/}
-main=${main:-master}
-
-stashed=false
-if [[ -n $(git status --porcelain) ]]; then
-	git stash push -u -m "git-prom autostash" && stashed=true
-fi
+default=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)
+default=${default#origin/}
+default=${default:-master}
 
 branch=$(git branch --show-current)
-if [ "$branch" != "$main" ]; then
-	git checkout "$main"
-	git pull
-	git branch -D "$branch" && git prune && git fetch --prune
-else
-	echo "You're trying to delete the $main branch"
-	exit 0
+if [ -z "$branch" ]; then
+	# detached HEAD (normal after `gt submit`): use the one branch at HEAD
+	at_head=($(git for-each-ref --points-at HEAD --format='%(refname:short)' refs/heads | grep -vxF "$default"))
+	if [ ${#at_head[@]} -ne 1 ]; then
+		echo "git close: HEAD is detached and ${#at_head[@]} branches point at it; check out the one to close"
+		exit 1
+	fi
+	branch=${at_head[0]}
 fi
-result=$?
+if [ "$branch" = "$default" ]; then
+	echo "git close: you're trying to delete the $default branch"
+	exit 1
+fi
 
-exit $result
+if [[ -n $(git status --porcelain) ]]; then
+	git stash push -u -m "git-close: $branch" || exit 1
+	echo "Uncommitted changes on $branch are in the stash (git stash list)"
+fi
+
+if [ "$linked" = true ]; then
+	cd "$main" || exit 1
+	git worktree remove "$top" || exit 1
+	echo "$main" >&3
+	git branch -D "$branch" || exit 1
+	if [ "$(git branch --show-current)" != "$default" ]; then
+		git switch "$default" || exit 1
+	fi
+else
+	git switch "$default" || exit 1
+	git branch -D "$branch" || exit 1
+fi
+git pull --prune

@@ -73,12 +73,20 @@ function ggb() {
 #################
 
 # `git wt <branch>` jumps to the worktree on that branch, `git wt -` back to the
-# main checkout. git-commands/git-wt finds the path; this wrapper does the cd,
-# which a git command can't do for your shell.
+# main checkout, and `git close` in a worktree lands you in the main checkout
+# after removing it. git-commands/git-wt and git-close find the path; this
+# wrapper does the cd, which a git command can't do for your shell.
 function git() {
 	if [[ $1 == wt && -n $2 && $2 != --* ]]; then
 		local dir
 		dir=$(command git wt "${@:2}") && cd "$dir"
+	elif [[ $1 == close ]]; then
+		# cd even when a later step fails: the worktree may already be gone
+		local dir rc
+		dir=$(command git close "${@:2}")
+		rc=$?
+		[[ -n $dir ]] && cd "$dir"
+		return $rc
 	else
 		command git "$@"
 	fi
