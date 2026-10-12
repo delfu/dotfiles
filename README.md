@@ -17,6 +17,10 @@ the custom git commands into `~/.local/bin`, and copies the dotfiles into
 
 To add a package, add it to `Brewfile` and run `brew bundle`.
 
+The installer skips Homebrew's Vorssaint installation when
+`/Applications/Vorssaint.app` already exists, leaving that app in place.
+Other Homebrew installation failures still stop setup.
+
 Options:
 
 - `--dotfiles-only` just copy dotfiles and git commands, skip installs and account setup

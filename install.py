@@ -92,7 +92,14 @@ def brew_install():
 def brew_bundle():
     brew = brew_path()
     if brew:
-        util_run(f"{brew} bundle --file={REPO_DIR / 'Brewfile'}")
+        cmd = f"{shlex.quote(brew)} bundle --file={shlex.quote(str(REPO_DIR / 'Brewfile'))}"
+        if Path("/Applications/Vorssaint.app").is_dir():
+            print("found Vorssaint, skipping its Homebrew installation")
+            skips = os.environ.get("HOMEBREW_BUNDLE_CASK_SKIP", "").split()
+            if "vorssaint" not in skips:
+                skips.append("vorssaint")
+            cmd = f"HOMEBREW_BUNDLE_CASK_SKIP={shlex.quote(' '.join(skips))} {cmd}"
+        util_run(cmd)
     else:
         print("brew not found, skipping Brewfile packages")
 
