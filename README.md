@@ -80,8 +80,9 @@ Use `--dry-run` to preview.
 
 `agents/` is the single source of truth for coding-agent config. `install.py`
 copies `agents/AGENTS.md` to `~/AGENTS.md` and `agents/skills` to
-`~/.agents/skills`, then symlinks Claude Code to them:
+`~/.agents/skills`, then creates the agent symlinks:
 
+- `~/.codex/AGENTS.md` -> `~/AGENTS.md`
 - `~/.claude/CLAUDE.md` -> `~/AGENTS.md`
 - `~/.claude/skills` -> `~/.agents/skills`
 
@@ -109,7 +110,7 @@ Double check the contents of the files before removing them so you don't lose cu
 ```
 rm -rf ~/.vim ~/.oh-my-zsh
 rm ~/.vimrc ~/.zshrc ~/.gitconfig ~/.gitignore_global
-rm -rf ~/AGENTS.md ~/.agents/skills ~/.claude/CLAUDE.md ~/.claude/skills ~/.claude/mods ~/.claude/settings.json
+rm -rf ~/AGENTS.md ~/.agents/skills ~/.codex/AGENTS.md ~/.claude/CLAUDE.md ~/.claude/skills ~/.claude/mods ~/.claude/settings.json
 rm ~/.local/bin/git-prom ~/.local/bin/git-undo ~/.local/bin/git-unstage
 chsh -s /bin/bash # change back to Bash if you want
 ```

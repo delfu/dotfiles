@@ -38,7 +38,7 @@ DOTFILES = {
     "gitconfig": ".gitconfig",
     "gitignore_global": ".gitignore_global",
     "KeyBindings/DefaultKeyBinding.dict": "Library/KeyBindings/DefaultKeyBinding.dict",
-    # agent config: one source of truth, which Claude reads through the symlinks below
+    # agent config: one source of truth, read through the symlinks below
     "agents/AGENTS.md": "AGENTS.md",
     "agents/skills": ".agents/skills",
     "agents/claude/settings.json": ".claude/settings.json",
@@ -51,6 +51,7 @@ MERGED_DIRS = {"agents/skills", "agents/claude/mods"}
 
 # symlink in $HOME -> target in $HOME
 SYMLINKS = {
+    ".codex/AGENTS.md": "AGENTS.md",
     ".claude/CLAUDE.md": "AGENTS.md",
     ".claude/skills": ".agents/skills",
 }
